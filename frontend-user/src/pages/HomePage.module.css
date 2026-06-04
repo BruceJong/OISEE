@@ -1,0 +1,168 @@
+/* Banner */
+.banner {
+  position: relative;
+  width: 100%;
+  background: linear-gradient(160deg, #0E1A33 0%, #1A2B4D 100%);
+  color: #fff;
+  overflow: hidden;
+  min-height: 640px;
+}
+.bannerBg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 40px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 40px);
+}
+.bannerCornerTR {
+  position: absolute; top: 28px; right: 40px; text-align: right;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 2px;
+  color: rgba(255,255,255,0.4); line-height: 1.6; z-index: 2;
+}
+.bannerCornerBL {
+  position: absolute; bottom: 28px; left: 40px; z-index: 2;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 2px;
+  color: rgba(255,255,255,0.35);
+}
+.bannerInner {
+  position: relative; max-width: 1440px; margin: 0 auto;
+  padding: 100px 40px 80px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 64px;
+  align-items: center; min-height: 640px; z-index: 1;
+}
+.bannerLeft { display: flex; flex-direction: column; }
+.heroTitle {
+  font-size: clamp(48px, 5vw, 76px); line-height: 1.05;
+  margin: 0; color: #fff; font-weight: 700; letter-spacing: -0.02em;
+}
+.heroDesc {
+  margin-top: 32px; font-size: 18px; line-height: 1.7;
+  color: rgba(255,255,255,0.7); max-width: 480px;
+}
+.heroCta { margin-top: 40px; display: flex; gap: 16px; }
+.btnAmber {
+  display: inline-flex; align-items: center; padding: 14px 32px;
+  background: var(--amber); color: var(--ink); border-radius: 4px;
+  font-weight: 600; font-size: 16px; text-decoration: none; transition: transform 0.2s;
+}
+.btnAmber:hover { transform: translateY(-2px); }
+.heroStats { margin-top: 64px; display: flex; gap: 56px; }
+.statN { font-family: var(--font-display); font-size: 44px; color: #fff; line-height: 1; font-weight: 700; }
+.statLabel { font-size: 14px; color: rgba(255,255,255,0.85); margin-top: 6px; font-weight: 500; }
+.statSub { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; font-family: var(--font-mono); letter-spacing: 1px; }
+.bannerRight { position: relative; height: 480px; display: flex; align-items: center; justify-content: center; }
+.heroImg { width: 100%; height: 100%; object-fit: contain; border-radius: 12px; }
+.heroSvg { width: 100%; height: 100%; }
+
+/* Section共用 */
+.sectionInner { max-width: 1440px; margin: 0 auto; padding: 0 40px; }
+.secHead { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: end; padding-bottom: 48px; }
+.secTitle { margin-top: 20px; font-size: clamp(36px, 4vw, 56px); max-width: 800px; }
+.secDesc { margin-top: 18px; color: var(--ink-3); max-width: 640px; font-size: 17px; line-height: 1.7; }
+.hoverHint { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 2px; }
+
+/* Kitchen Demo */
+.demoSection { padding-top: 96px; }
+.kitchenWrap { background: var(--paper, #F7F5F0); border-top: 1px solid var(--hairline, #E8E3DB); border-bottom: 1px solid var(--hairline, #E8E3DB); }
+.kitchenCanvas { position: relative; width: 100%; overflow: hidden; }
+.kitchenImg { width: 100%; height: 560px; object-fit: cover; object-position: center top; display: block; }
+.hotspot {
+  position: absolute; transform: translate(-50%, -50%);
+  background: none; border: none; cursor: pointer; padding: 0; z-index: 10;
+  display: flex; flex-direction: column; align-items: center;
+}
+.hotspotDot {
+  display: block; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--amber); border: 2px solid #fff;
+  box-shadow: 0 0 0 4px rgba(216,149,49,0.3); transition: transform 0.2s;
+}
+.hotspot:hover .hotspotDot, .hotspotActive .hotspotDot {
+  transform: scale(1.4); box-shadow: 0 0 0 8px rgba(216,149,49,0.2);
+}
+.hotspotLabel {
+  display: block; margin-top: 6px; font-size: 12px; font-weight: 600;
+  color: var(--ink); white-space: nowrap;
+  background: rgba(255,255,255,0.9); padding: 2px 8px; border-radius: 10px;
+}
+.hotspotBubble {
+  position: absolute; bottom: calc(100% + 16px); left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: #fff; border-radius: 8px; padding: 14px 16px; width: 220px;
+  z-index: 20; box-shadow: 0 8px 24px rgba(14,26,51,0.25); text-align: left;
+}
+.hotspotBubble::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 6px solid transparent; border-top-color: var(--ink);
+}
+.bubbleTitle { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.bubbleKps { display: flex; flex-direction: column; gap: 4px; }
+.bubbleKp { font-size: 12px; color: rgba(255,255,255,0.7); padding-left: 14px; position: relative; }
+.bubbleKp::before { content: '→'; position: absolute; left: 0; color: var(--amber); }
+.chainGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; padding: 32px 40px 48px; border-top: 1px solid var(--hairline, #E8E3DB); max-width: 1440px; margin: 0 auto; }
+.chainStep { display: flex; flex-direction: column; gap: 14px; }
+.chainHead { display: flex; align-items: center; gap: 12px; }
+.chainLine { flex: 1; height: 1px; opacity: 0.4; }
+.chainLabel { font-size: 11px; color: var(--ink-3); font-weight: 600; letter-spacing: 1px; margin-bottom: 4px; }
+.chainValue { font-family: var(--font-display); font-size: 22px; color: var(--ink); line-height: 1.2; }
+
+/* Experiments */
+.expSection { background: var(--ink, #0E1A33); color: #fff; }
+.expVideo { position: relative; display: grid; grid-template-columns: 1fr 1fr; }
+.expVideoInner { position: relative; min-height: 400px; overflow: hidden; background: linear-gradient(135deg, #0E1A33 0%, #1A2B4D 100%); }
+.expVideoImg { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.7; }
+.expVideoOverlay { position: absolute; inset: 0; background: linear-gradient(to right, rgba(14,26,51,0.8) 0%, rgba(14,26,51,0.2) 100%); }
+.expPlayGroup { position: absolute; left: 48px; bottom: 48px; display: flex; align-items: center; gap: 24px; }
+.expPlayBtn {
+  width: 84px; height: 84px; border-radius: 50%; background: var(--amber); color: var(--ink);
+  display: grid; place-items: center; text-decoration: none; transition: transform 0.2s; flex-shrink: 0;
+}
+.expPlayBtn:hover { transform: scale(1.08); }
+.expBadge { font-family: var(--font-mono); font-size: 11px; color: var(--amber); letter-spacing: 2px; margin-bottom: 6px; }
+.expVideoTitle { margin: 0; font-size: 28px; color: #fff; }
+.expMeta { margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.55); }
+.expListGrid { display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.1); }
+.expListItem {
+  display: flex; gap: 20px; padding: 28px 32px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  text-decoration: none; transition: background 0.15s; align-items: flex-start;
+}
+.expListItem:hover { background: rgba(255,255,255,0.04); }
+.expListImg { width: 80px; height: 60px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.06); }
+.expListImg img { width: 100%; height: 100%; object-fit: cover; }
+.expListName { margin: 4px 0; font-size: 20px; color: #fff; }
+.expListDesc { margin: 0; font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.6; }
+.expListMeta { margin-top: 8px; font-size: 12px; color: rgba(255,255,255,0.4); }
+.secTitleLight { margin-top: 20px; font-size: clamp(32px, 3vw, 48px); color: #fff; max-width: 900px; }
+.secDescLight { margin-top: 18px; color: rgba(255,255,255,0.6); max-width: 720px; font-size: 17px; line-height: 1.7; }
+
+/* Philosophy */
+.philoSection { background: var(--paper, #F7F5F0); border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); padding: 120px 0; }
+.philoGrid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 80px; }
+.philoTitle { margin-top: 28px; font-size: clamp(36px, 3.5vw, 52px); line-height: 1.1; }
+.philoDesc { margin-top: 28px; font-size: 17px; color: var(--ink-3); line-height: 1.8; }
+.philoQuote { margin-top: 32px; padding: 20px 24px; background: var(--bg, #EFECE5); border-left: 2px solid var(--amber); }
+.philoChain { font-family: var(--font-display); font-size: 24px; line-height: 1.4; color: var(--ink); }
+.diffGrid { margin-top: 32px; padding: 28px; background: var(--bg, #EFECE5); display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.diffCardTitle { font-family: var(--font-display); font-size: 18px; margin-top: 6px; }
+.philoRow { padding: 28px 0; border-top: 1px solid var(--hairline); display: grid; grid-template-columns: 60px 200px 1fr; gap: 24px; align-items: start; }
+.philoRowN { font-family: var(--font-mono); color: var(--amber); font-size: 13px; font-weight: 600; padding-top: 2px; }
+.philoRowTitle { font-family: var(--font-display); font-size: 22px; color: var(--ink); line-height: 1.3; }
+.philoRowBody { margin: 0; font-size: 15px; color: var(--ink-2); line-height: 1.7; }
+
+/* CTA */
+.ctaSection { background: var(--bg, #EFECE5); padding: 120px 40px; }
+.ctaInner { max-width: 1200px; margin: 0 auto; text-align: center; }
+.ctaTitle { margin-top: 24px; font-size: clamp(48px, 5vw, 72px); line-height: 1.05; }
+.ctaDesc { margin-top: 28px; font-size: 18px; color: var(--ink-3); max-width: 580px; margin-left: auto; margin-right: auto; line-height: 1.7; }
+.ctaBtns { margin-top: 44px; display: flex; gap: 16px; justify-content: center; }
+.btnPrimary {
+  display: inline-flex; align-items: center; padding: 14px 32px;
+  background: var(--ink); color: #fff; border-radius: 4px;
+  font-weight: 600; font-size: 16px; text-decoration: none; transition: transform 0.2s;
+}
+.btnPrimary:hover { transform: translateY(-2px); }
+.btnGhost {
+  display: inline-flex; align-items: center; padding: 14px 32px;
+  background: transparent; color: var(--ink); border: 1.5px solid var(--ink);
+  border-radius: 4px; font-weight: 600; font-size: 16px; text-decoration: none; transition: background 0.15s;
+}
+.btnGhost:hover { background: rgba(14,26,51,0.06); }

@@ -1,0 +1,246 @@
+// OISee Prisma Schema · MVP 闭环版
+// ============================================================
+// 范围说明：本 schema 仅包含第一波本地闭环需要的实体。
+// 完整设计见 tech-design/02-数据模型设计.md 与 09-CMS技术设计.md。
+// 暂未引入：
+//   - 实验（Experiment）相关
+//   - 激励（PointsLedger / Badge / UserBadge）
+//   - AIGC（AiTask / AIProvider / PromptTemplate）
+//   - 完整 RBAC（Role / Permission / RolePermission / AdminRole）
+//   - pgvector embedding
+// 这些都将在后续阶段渐进式加入。
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("OISEE_DATABASE_URL")
+}
+
+// ============================================================
+// 枚举
+// ============================================================
+
+enum Difficulty {
+  L1
+  L2
+  L3
+}
+
+enum Subject {
+  PHYSICS
+  CHEMISTRY
+  BIOLOGY
+  GEOGRAPHY
+  OTHER
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// ============================================================
+// 管理员
+// ============================================================
+
+model Admin {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  email        String?  @unique
+  isActive     Boolean  @default(true)
+  // MVP 阶段仅 'superadmin' 一个角色，存字符串字段；后续切到 RBAC 多对多
+  role         String   @default("superadmin")
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastLoginAt  DateTime?
+}
+
+// ============================================================
+// 场景
+// ============================================================
+
+model Scene {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  name          String
+  groupName     String                                  // "家" / "校园" / "户外" / "城市"
+  description   String?
+  coverUrl      String?
+  sceneImageUrl String?                                 // 2.5D 大图（缺失时前端用 SVG 模板）
+  iconKind      String?                                 // home/school/park/hospital/mall
+  themeColor    String?                                 // sun/ocean/leaf/coral/berry
+  isDefault     Boolean       @default(false)
+  unlockHint    String?
+  mapPosition   Json?                                   // {x, y} 百分比
+  status        ContentStatus @default(DRAFT)
+  sortOrder     Int           @default(0)
+
+  items         Item[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+
+  @@index([status, sortOrder])
+}
+
+// ============================================================
+// 物品
+// ============================================================
+
+model Item {
+  id                  String   @id @default(cuid())
+  slug                String   @unique
+  name                String
+  sceneId             String
+  scene               Scene    @relation(fields: [sceneId], references: [id])
+
+  coverUrl            String?
+  itemImageUrl        String?
+  svgSymbolId         String?
+
+  shortDesc           String
+  // {"L1": "...", "L2": "...", "L3": "..."}
+  principleByLevel    Json     @default("{}")
+
+  videoTitle          String?
+  videoDurationSec    Int?
+  principleVideoUrl   String?
+  explodedImageUrl    String?
+  parts               Json?    // [{no, name, desc, x, y}]
+  scenePosition       Json?    // {x, y, width, height} 百分比
+
+  status              ContentStatus @default(DRAFT)
+  sortOrder           Int      @default(0)
+
+  knowledgePoints     ItemKnowledgePoint[]
+  experiments         ExperimentItem[]
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  deletedAt           DateTime?
+
+  @@index([sceneId, sortOrder])
+  @@index([status])
+}
+
+// ============================================================
+// 知识点
+// ============================================================
+
+model KnowledgePoint {
+  id              String        @id @default(cuid())
+  slug            String        @unique
+  name            String
+  subject         Subject
+  difficulty      Difficulty
+  summary         String?
+  // MVP 用纯文本/Markdown 字符串；后续切到 TipTap JSON
+  content         String
+  illustrationUrl String?
+
+  status          ContentStatus @default(DRAFT)
+
+  items           ItemKnowledgePoint[]
+  experiments     ExperimentKnowledgePoint[]
+  // 自关联（知识网络）
+  relatedFrom     KnowledgeRelation[] @relation("fromKp")
+  relatedTo       KnowledgeRelation[] @relation("toKp")
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+
+  @@index([subject, difficulty])
+  @@index([status])
+}
+
+// ============================================================
+// 多对多关联
+// ============================================================
+
+model ItemKnowledgePoint {
+  itemId           String
+  knowledgePointId String
+  sortOrder        Int    @default(0)
+
+  item             Item           @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  knowledgePoint   KnowledgePoint @relation(fields: [knowledgePointId], references: [id], onDelete: Cascade)
+
+  createdAt        DateTime @default(now())
+
+  @@id([itemId, knowledgePointId])
+  @@index([knowledgePointId])
+}
+
+// ============================================================
+// 实验
+// ============================================================
+
+model Experiment {
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  name           String
+  difficulty     Difficulty
+  durationMin    Int           @default(10)
+  needParent     Boolean       @default(false)
+  materialType   String?                               // "家用物品" / "材料包"
+  description    String
+  materialsHome  Json?                                 // string[]
+  materialsKit   Json?                                 // string[]
+  safety         String?
+  coverUrl       String?
+  videoUrl       String?
+  status         ContentStatus @default(DRAFT)
+  sortOrder      Int           @default(0)
+
+  items          ExperimentItem[]
+  knowledgePoints ExperimentKnowledgePoint[]
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  @@index([status, difficulty])
+}
+
+model ExperimentItem {
+  experimentId String
+  itemId       String
+
+  experiment   Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  item         Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([experimentId, itemId])
+}
+
+model ExperimentKnowledgePoint {
+  experimentId     String
+  knowledgePointId String
+
+  experiment       Experiment     @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  knowledgePoint   KnowledgePoint @relation(fields: [knowledgePointId], references: [id], onDelete: Cascade)
+
+  @@id([experimentId, knowledgePointId])
+}
+
+model KnowledgeRelation {
+  fromId       String
+  toId         String
+  relationType String?
+
+  from         KnowledgePoint @relation("fromKp", fields: [fromId], references: [id], onDelete: Cascade)
+  to           KnowledgePoint @relation("toKp", fields: [toId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+
+  @@id([fromId, toId])
+  @@index([toId])
+}

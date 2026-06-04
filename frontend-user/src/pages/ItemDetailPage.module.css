@@ -1,0 +1,125 @@
+/* Hero */
+.heroBg {
+  background: linear-gradient(180deg, #0E1A33 0%, #1A2B4D 100%);
+  color: #fff;
+  padding-bottom: 64px;
+}
+.back {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: rgba(255,255,255,0.5); font-size: 14px; text-decoration: none;
+  padding: 24px 0; transition: color 0.15s;
+}
+.back:hover { color: rgba(255,255,255,0.9); }
+.hero { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: flex-start; }
+.mediaCol {}
+
+/* Video/Image box */
+.videoBox { border-radius: 12px; overflow: hidden; background: rgba(255,255,255,0.05); aspect-ratio: 16/10; position: relative; }
+.video { width: 100%; height: 100%; object-fit: cover; }
+.videoPlaceholder { position: absolute; inset: 0; }
+.videoThumb { width: 100%; height: 100%; object-fit: cover; opacity: 0.5; display: block; }
+.videoGrid {
+  position: absolute; inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 40px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 40px);
+}
+.videoOverlay {
+  position: absolute; inset: 0; display: flex; align-items: flex-end; padding: 32px;
+  background: linear-gradient(to top, rgba(14,26,51,0.85) 0%, transparent 60%);
+}
+.playCircle {
+  width: 64px; height: 64px; border-radius: 50%; background: var(--amber); color: var(--ink);
+  display: grid; place-items: center; flex-shrink: 0;
+}
+.videoMeta { margin-left: 20px; }
+.videoBadge { font-family: var(--font-mono); font-size: 10px; color: var(--amber); letter-spacing: 2px; margin-bottom: 6px; }
+.videoTitle { font-size: 20px; color: #fff; font-weight: 600; line-height: 1.3; }
+.videoDuration { margin-top: 6px; font-size: 13px; color: rgba(255,255,255,0.5); }
+
+/* Hero info */
+.heroInfo { padding-top: 8px; }
+.title { margin: 12px 0 0; font-size: clamp(36px, 4vw, 52px); color: #fff; }
+.lead { margin: 16px 0 0; font-size: 18px; color: rgba(255,255,255,0.7); line-height: 1.6; }
+
+.layers { margin-top: 36px; }
+.levelTabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.levelTab {
+  background: none; border: 1.5px solid rgba(255,255,255,0.15); border-radius: 6px;
+  padding: 6px 12px; cursor: pointer; display: flex; align-items: center; gap: 6px;
+  transition: background 0.15s, border-color 0.15s; color: inherit;
+}
+.levelTab:hover:not(:disabled) { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); }
+.levelTabActive { background: rgba(255,255,255,0.12) !important; border-color: rgba(255,255,255,0.4) !important; }
+.levelTabLocked { opacity: 0.4; cursor: not-allowed; }
+.lockIcon { font-size: 12px; }
+.levelContent {
+  background: rgba(255,255,255,0.06); border-radius: 8px; padding: 20px;
+  border: 1px solid rgba(255,255,255,0.1); min-height: 80px;
+}
+.levelText { margin: 0; font-size: 16px; color: rgba(255,255,255,0.9); line-height: 1.7; }
+.lockedText { margin: 0; font-size: 15px; color: rgba(255,255,255,0.3); text-align: center; padding: 16px 0; }
+
+/* Exploded section */
+.explodedSection {
+  background: var(--ink, #0E1A33);
+  color: #fff;
+  padding: 72px 0;
+}
+.sectionHead { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 40px; }
+.sectionTitle { margin: 0; font-size: 28px; color: inherit; }
+
+.explodedLayout { display: grid; grid-template-columns: 1fr 320px; gap: 48px; align-items: flex-start; }
+.explodedImg {}
+.explodedCanvas { position: relative; border-radius: 12px; overflow: hidden; background: rgba(255,255,255,0.04); }
+.explodedImage { width: 100%; display: block; }
+.explodedPlaceholder {
+  height: 360px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: 12px; background: rgba(255,255,255,0.04);
+}
+
+.partDot {
+  position: absolute; transform: translate(-50%, -50%);
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--amber); color: var(--ink);
+  display: grid; place-items: center; cursor: pointer;
+  border: 2px solid var(--ink); font-weight: 700; font-size: 12px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.partDot:hover, .partDotActive {
+  transform: translate(-50%, -50%) scale(1.3);
+  box-shadow: 0 0 0 6px rgba(216,149,49,0.25);
+}
+.partNo { font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+
+.partsList { display: flex; flex-direction: column; gap: 0; }
+.partItem {
+  padding: 16px 0; border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex; gap: 16px; cursor: pointer; align-items: flex-start;
+  transition: background 0.1s;
+}
+.partItem:first-of-type { border-top: none; }
+.partItemActive { background: rgba(255,255,255,0.05); border-radius: 8px; padding-left: 12px; }
+.partBadge {
+  width: 24px; height: 24px; border-radius: 50%; background: var(--amber); color: var(--ink);
+  display: grid; place-items: center; font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  flex-shrink: 0; margin-top: 2px;
+}
+.partName { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+.partDesc { margin: 0; font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.5; }
+
+/* KP section */
+.placeholder { padding: 60px; text-align: center; color: var(--ink-3); border: 1.5px dashed var(--hairline); border-radius: 8px; }
+.kpGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.kpCard {
+  border: 1.5px solid var(--hairline); border-radius: 10px; padding: 24px;
+  text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 10px;
+  transition: box-shadow 0.2s, transform 0.2s; background: var(--paper);
+}
+.kpCard:hover:not(.kpLocked) { box-shadow: 0 6px 20px rgba(14,26,51,0.1); transform: translateY(-2px); }
+.kpLocked { opacity: 0.5; }
+.kpTags { display: flex; gap: 8px; }
+.kpName { margin: 0; font-size: 20px; font-family: var(--font-display); }
+.kpSummary { margin: 0; font-size: 14px; color: var(--ink-3); line-height: 1.5; flex: 1; }
+.lockHint { font-size: 12px; color: var(--ink-4); margin-top: auto; }
+.kpLink { font-size: 13px; color: var(--amber); font-weight: 600; margin-top: auto; }

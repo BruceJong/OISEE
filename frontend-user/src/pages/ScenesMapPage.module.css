@@ -1,0 +1,233 @@
+.root {
+  position: relative;
+  height: calc(100vh - 64px);
+  overflow: hidden;
+  background: linear-gradient(180deg, #B8DAF0 0%, #D8E8C9 70%, #C2A77A 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+/* HUD */
+.hud {
+  position: absolute;
+  top: 24px;
+  left: 40px;
+  right: 40px;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.hudTitle { margin-top: 12px; font-size: 40px; color: var(--ink); }
+.hudMeta { display: flex; gap: 24px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); letter-spacing: 2px; }
+.hudBadgeOn { color: #4A8662; }
+.hudBadgeOff { color: var(--ink-3); }
+
+/* 地图滚动容器 */
+.mapScroll {
+  flex: 1;
+  overflow: auto;
+  cursor: grab;
+  -webkit-overflow-scrolling: touch;
+}
+.mapScroll:active { cursor: grabbing; }
+
+.mapCanvas {
+  position: relative;
+  width: 1600px;
+  height: 900px;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.terrainSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 图例 */
+.legend {
+  position: absolute;
+  bottom: 24px;
+  left: 40px;
+  z-index: 20;
+  display: flex;
+  gap: 32px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  letter-spacing: 2px;
+  pointer-events: none;
+}
+.legendHint { color: var(--amber); }
+
+/* 场景节点 */
+.sceneNode {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.2s;
+}
+.sceneNode:hover { transform: translate(-50%, -50%) scale(1.08); }
+
+.nodeIcon {
+  width: 90px;
+  height: 90px;
+  border-radius: 16px;
+  border: 3px solid;
+  overflow: hidden;
+  background: #fff;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(14,26,51,0.2);
+}
+.nodeImg { width: 100%; height: 100%; object-fit: cover; }
+.nodeEmoji { font-size: 40px; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.nodeGlow {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+}
+
+.nodeLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,0.95);
+  border: 1.5px solid rgba(14,26,51,0.12);
+  border-radius: 12px;
+  padding: 4px 12px;
+  box-shadow: 0 2px 8px rgba(14,26,51,0.1);
+}
+.nodeName { font-size: 13px; font-weight: 700; color: var(--ink); }
+.nodeGroup { font-size: 10px; color: var(--ink-3); font-family: var(--font-mono); letter-spacing: 1px; }
+
+.nodeProgress {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+/* 锁定节点 */
+.lockedNode {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: help;
+}
+.fogCloud {
+  position: absolute;
+  width: 180px;
+  height: 140px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.75);
+  filter: blur(20px);
+  z-index: -1;
+}
+.lockIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(14,26,51,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(14,26,51,0.3);
+}
+.lockedLabel { font-size: 13px; font-weight: 600; color: var(--ink); }
+.lockedSub { font-size: 10px; color: var(--ink-3); font-family: var(--font-mono); letter-spacing: 2px; }
+.lockHintBubble {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  z-index: 30;
+}
+.lockHintBubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--ink);
+}
+
+/* 弹框 */
+.modalMask {
+  position: fixed;
+  inset: 0;
+  background: rgba(14,26,51,0.5);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.modalCard {
+  background: var(--paper, #F7F5F0);
+  border-radius: 12px;
+  overflow: hidden;
+  width: 640px;
+  max-width: 90vw;
+  box-shadow: 0 24px 64px rgba(14,26,51,0.3);
+  position: relative;
+}
+.modalHead { display: flex; gap: 0; position: relative; }
+.modalCover { width: 200px; flex-shrink: 0; position: relative; }
+.modalCover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.modalCoverOverlay { position: absolute; inset: 0; }
+.modalHeadInfo { flex: 1; padding: 32px; }
+.modalTitle { margin: 12px 0 0; font-size: 36px; }
+.modalDesc { margin: 12px 0 0; color: var(--ink-3); font-size: 14px; line-height: 1.6; }
+.modalMetaRow { margin-top: 16px; display: flex; gap: 24px; font-size: 13px; color: var(--ink-3); }
+.modalClose {
+  position: absolute; top: 16px; right: 16px;
+  background: none; border: none; font-size: 24px; cursor: pointer; color: var(--ink-3);
+  width: 36px; height: 36px; display: grid; place-items: center;
+}
+.modalActions {
+  display: flex;
+  gap: 12px;
+  padding: 20px 32px;
+  border-top: 1px solid var(--hairline, #E8E3DB);
+}
+.btnEnter {
+  flex: 1; padding: 12px 24px; color: #fff; border-radius: 4px;
+  font-weight: 600; text-align: center; text-decoration: none;
+  font-size: 15px; transition: opacity 0.15s;
+}
+.btnEnter:hover { opacity: 0.88; }
+.btnCancel {
+  padding: 12px 24px; background: none; border: 1.5px solid var(--hairline);
+  border-radius: 4px; font-weight: 500; cursor: pointer; font-size: 15px; color: var(--ink-3);
+}

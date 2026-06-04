@@ -1,0 +1,105 @@
+.loading { padding: 80px 0; text-align: center; color: var(--ink-3); }
+
+/* Hero */
+.hero {
+  border-bottom: 1px solid;
+  position: relative;
+  overflow: hidden;
+}
+.heroBg { position: absolute; inset: 0; pointer-events: none; }
+.back {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--ink-3); font-size: 14px; text-decoration: none;
+  padding: 20px 0; transition: color 0.15s;
+}
+.back:hover { color: var(--ink); }
+
+.heroContent {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 48px;
+  align-items: flex-start;
+  padding-bottom: 56px;
+}
+
+.heroInfo { padding-top: 8px; }
+.title { margin: 12px 0 0; font-size: clamp(36px, 4vw, 56px); }
+.lead { margin: 16px 0 0; color: var(--ink-3); font-size: 17px; line-height: 1.7; max-width: 440px; }
+.heroBadges { margin-top: 24px; display: flex; gap: 10px; }
+.badge {
+  padding: 4px 12px; border-radius: 20px; border: 1.5px solid var(--hairline);
+  font-size: 13px; font-weight: 500; color: var(--ink-3);
+}
+
+/* Scene canvas */
+.sceneCanvas { position: relative; border-radius: 12px; overflow: hidden; background: var(--bg); }
+.sceneImg { width: 100%; display: block; aspect-ratio: 16/10; object-fit: cover; }
+.sceneImgPlaceholder {
+  height: 380px; display: flex; align-items: center; justify-content: center;
+  border-radius: 12px;
+}
+
+.sceneHotspot {
+  position: absolute; transform: translate(-50%, -50%);
+  background: none; border: none; cursor: pointer; padding: 0; z-index: 10;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; text-decoration: none;
+}
+.sceneHotDot {
+  display: block; width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid #fff; box-shadow: 0 0 0 3px rgba(216,149,49,0.3);
+  transition: transform 0.2s;
+}
+.sceneHotspot:hover .sceneHotDot, .sceneHotspotActive .sceneHotDot {
+  transform: scale(1.5); box-shadow: 0 0 0 6px rgba(216,149,49,0.2);
+}
+.sceneHotLabel {
+  font-size: 11px; font-weight: 600; color: var(--ink);
+  background: rgba(255,255,255,0.92); padding: 2px 7px; border-radius: 8px; white-space: nowrap;
+}
+.sceneHotBubble {
+  position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: #fff; border-radius: 8px; padding: 12px 14px; width: 200px;
+  z-index: 20; box-shadow: 0 8px 24px rgba(14,26,51,0.25); text-align: left;
+}
+.sceneHotBubble::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--ink);
+}
+.sceneHotName { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.sceneHotDesc { margin: 0 0 8px; font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.5; }
+.sceneHotKps { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.sceneKpTag {
+  font-size: 10px; padding: 2px 6px; border-radius: 4px;
+  background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8);
+}
+.sceneHotLink { font-size: 11px; color: var(--amber); font-weight: 600; }
+
+/* Items grid */
+.itemsHead { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 32px; }
+.itemsTitle { margin: 0; font-family: var(--font-display); font-size: 28px; }
+.placeholder { padding: 60px; text-align: center; color: var(--ink-3); border: 1.5px dashed var(--hairline); border-radius: 8px; }
+
+.itemGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
+.itemCard {
+  border: 1.5px solid var(--hairline); border-radius: 10px; overflow: hidden;
+  text-decoration: none; color: inherit; display: flex; flex-direction: column;
+  transition: box-shadow 0.2s, transform 0.2s; background: var(--paper);
+}
+.itemCard:hover { box-shadow: 0 8px 24px rgba(14,26,51,0.1); transform: translateY(-2px); }
+.itemCover {
+  height: 180px; background: var(--bg); display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.itemCover img { width: 100%; height: 100%; object-fit: contain; padding: 12px; }
+.itemIcon { font-size: 60px; }
+.itemBody { padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.itemName { margin: 0; font-size: 20px; font-family: var(--font-display); }
+.itemDesc { margin: 0; font-size: 14px; color: var(--ink-3); line-height: 1.5; flex: 1; }
+.itemKps { display: flex; flex-wrap: wrap; gap: 6px; }
+.kpTag {
+  font-size: 11px; padding: 3px 8px; border-radius: 10px;
+  background: var(--bg); color: var(--ink-3); font-weight: 500;
+}
+.itemFooter {
+  margin-top: 4px; font-size: 13px; color: var(--amber); font-weight: 600;
+}

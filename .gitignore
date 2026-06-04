@@ -1,0 +1,54 @@
+# ────────── 依赖与构建产物 ──────────
+node_modules/
+.pnpm-store/
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
+
+# ────────── 环境变量 ──────────
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ────────── 日志 ──────────
+*.log
+logs/
+pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ────────── 数据上传（生成的图片/视频；走 CDN，不入 git） ──────────
+data/uploads/
+!data/uploads/.gitkeep
+
+# ────────── Prisma 本地产物 ──────────
+backend/prisma/migrations/dev.db*
+
+# ────────── 编辑器 / IDE ──────────
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+*.swp
+*.swo
+
+# ────────── 操作系统 ──────────
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ────────── 测试 / 覆盖率 ──────────
+coverage/
+.nyc_output/
+
+# ────────── Claude / 本地工作区 ──────────
+.claude/
+
+# ────────── 临时文件 ──────────
+*.tmp
+*.bak

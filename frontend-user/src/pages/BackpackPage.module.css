@@ -1,0 +1,67 @@
+.header { background: linear-gradient(160deg, #0E1A33 0%, #1A2B4D 100%); color: #fff; padding: 80px 0 56px; }
+.title { margin: 12px 0 0; font-size: clamp(32px, 4vw, 48px); color: #fff; }
+.layout { display: grid; grid-template-columns: 280px 1fr; gap: 48px; }
+
+/* Profile */
+.sidebar {}
+.profileCard {
+  background: var(--paper); border: 1.5px solid var(--hairline); border-radius: 12px;
+  padding: 32px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  margin-bottom: 24px; text-align: center;
+}
+.avatar {
+  width: 80px; height: 80px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; font-weight: 700; color: #fff;
+}
+.profileName { font-size: 22px; font-weight: 700; }
+.profileLevel { display: flex; align-items: center; gap: 8px; }
+.levelBadge { background: var(--amber); color: var(--ink); padding: 3px 10px; border-radius: 10px; font-size: 13px; font-weight: 700; font-family: var(--font-mono); }
+.levelTitle { font-size: 14px; color: var(--ink-3); }
+.expBar { width: 100%; height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+.expFill { height: 100%; background: var(--amber); border-radius: 4px; transition: width 0.5s; }
+.expText { width: 100%; display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); font-family: var(--font-mono); }
+.pointsBig { margin-top: 8px; display: flex; align-items: baseline; gap: 8px; }
+.pointsNum { font-family: var(--font-display); font-size: 48px; font-weight: 700; color: var(--ink); line-height: 1; }
+.pointsLabel { font-size: 14px; color: var(--ink-3); }
+
+/* Progress */
+.progressCard { background: var(--paper); border: 1.5px solid var(--hairline); border-radius: 12px; padding: 24px; }
+.progressRow { margin-bottom: 18px; }
+.progressRow:last-child { margin-bottom: 0; }
+.progressRowTop { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.progressLabel { font-size: 14px; font-weight: 500; }
+.progressFrac { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
+.progressTrack { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.progressBar { height: 100%; background: var(--blue, #305FBE); border-radius: 3px; }
+
+/* Main */
+.main {}
+.section { margin-bottom: 48px; }
+.sectionHead { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; }
+.sectionTitle { margin: 0; font-size: 24px; font-family: var(--font-display); }
+
+/* Badges */
+.badgesGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
+.badgeItem {
+  border: 1.5px solid var(--hairline); border-radius: 10px; padding: 18px 14px;
+  text-align: center; display: flex; flex-direction: column; gap: 8px;
+}
+.badgeGot { background: var(--paper); }
+.badgeLocked { background: var(--bg); opacity: 0.5; }
+.badgeIcon { font-size: 32px; }
+.badgeName { font-size: 13px; font-weight: 600; }
+.badgeDesc { font-size: 11px; color: var(--ink-3); line-height: 1.4; }
+
+/* History */
+.historyList { display: flex; flex-direction: column; border: 1.5px solid var(--hairline); border-radius: 10px; overflow: hidden; }
+.historyItem {
+  display: grid; grid-template-columns: 36px 1fr auto auto;
+  align-items: center; gap: 12px; padding: 16px 20px;
+  border-bottom: 1px solid var(--hairline); background: var(--paper);
+}
+.historyItem:last-child { border-bottom: none; }
+.historyIcon { font-size: 20px; }
+.historyText { font-size: 14px; color: var(--ink-2); }
+.historyTime { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.historyPts { font-family: var(--font-mono); font-size: 13px; font-weight: 700; white-space: nowrap; }

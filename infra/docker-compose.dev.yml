@@ -1,0 +1,44 @@
+# 本地开发依赖服务（仅 PostgreSQL + Redis）
+# API / 前端在宿主机直接 pnpm dev 启动，方便热重载
+#
+# 使用：
+#   pnpm docker:dev          启动
+#   pnpm docker:dev:stop     停止
+#   pnpm docker:dev:logs     查看日志
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: oisee_pg_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: oisee
+      POSTGRES_PASSWORD: oisee_dev
+      POSTGRES_DB: oisee_dev
+    ports:
+      - '5432:5432'
+    volumes:
+      - oisee_pg_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U oisee -d oisee_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: oisee_redis_dev
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - oisee_redis_dev:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  oisee_pg_dev:
+  oisee_redis_dev:

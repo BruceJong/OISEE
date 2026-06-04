@@ -1,0 +1,35 @@
+{
+  "name": "oisee",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OISee — 面向青少年的科普网站",
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter=!@oisee/config dev",
+    "dev:api": "pnpm --filter @oisee/api run dev",
+    "dev:cms": "pnpm --filter @oisee/cms run dev",
+    "dev:web": "pnpm --filter @oisee/web run dev",
+    "dev:shared": "pnpm --filter @oisee/shared run dev",
+    "build": "pnpm -r build",
+    "build:shared": "pnpm --filter @oisee/shared build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "db:migrate": "pnpm --filter @oisee/api prisma migrate dev",
+    "db:generate": "pnpm --filter @oisee/api prisma generate",
+    "db:seed": "pnpm --filter @oisee/api db:seed",
+    "db:studio": "pnpm --filter @oisee/api prisma studio",
+    "db:reset": "pnpm --filter @oisee/api prisma migrate reset --force",
+    "docker:dev": "docker compose -f infra/docker-compose.dev.yml up -d",
+    "docker:dev:stop": "docker compose -f infra/docker-compose.dev.yml down",
+    "docker:dev:logs": "docker compose -f infra/docker-compose.dev.yml logs -f"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "prettier": "^3.3.0",
+    "@types/node": "^22.0.0"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}
