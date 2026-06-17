@@ -1,14 +1,7 @@
 // OISee Prisma Schema · MVP 闭环版
 // ============================================================
-// 范围说明：本 schema 仅包含第一波本地闭环需要的实体。
+// 范围说明：本 schema 包含 CMS 快速管理、AI 生图任务队列及设置模块。
 // 完整设计见 tech-design/02-数据模型设计.md 与 09-CMS技术设计.md。
-// 暂未引入：
-//   - 实验（Experiment）相关
-//   - 激励（PointsLedger / Badge / UserBadge）
-//   - AIGC（AiTask / AIProvider / PromptTemplate）
-//   - 完整 RBAC（Role / Permission / RolePermission / AdminRole）
-//   - pgvector embedding
-// 这些都将在后续阶段渐进式加入。
 // ============================================================
 
 generator client {
@@ -63,22 +56,83 @@ model Admin {
 }
 
 // ============================================================
-// 场景
+// 终端用户（前台账号）
+// ============================================================
+
+model User {
+  id            String    @id @default(cuid())
+  username      String?   @unique   // 账密注册必填；纯微信用户可空
+  passwordHash  String?             // 微信用户可空
+  nickname      String              // 显示名
+  avatar        String              // 预设头像 key，如 "fox"
+  phone         String?
+  wechatOpenId  String?   @unique   // 微信(模拟)唯一标识
+
+  // 学习画像
+  age           Int?
+  learningStage String?             // 用户自填（自由文本/下拉）
+  gradeStage    String?             // 思考模型结果: PRESCHOOL/PRIMARY/MIDDLE/HIGH/ADULT
+
+  isActive      Boolean   @default(true)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+}
+
+// ============================================================
+// 一级场景（场景组）
+// ============================================================
+
+model SceneGroup {
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  name           String        @unique              // "家" / "校园" / "户外" / "城市"
+  description    String?
+  mapImageUrl    String?                            // 一级地图背景图（历史字段，已迁移到 AdminSetting['world_map']）
+  mapImagePrompt String?                            // AI 文生图提示词（历史字段）
+  mapPosition    Json?                              // {x, y, radius} 百分比，该一级场景在世界地图上的位置
+  iconKind       String?                            // home/school/park/hospital/mall
+  themeColor     String?                            // sun/ocean/leaf/coral/berry
+  sortOrder      Int           @default(0)
+  status         ContentStatus @default(DRAFT)
+
+  // ── 解锁逻辑 ──
+  isLocked         Boolean @default(false)          // 是否锁定（false=默认开放）
+  unlockHint       String?                          // 锁定提示文案
+  unlockConditions Json?                            // { type: 'after_groups', groupIds: ['xxx', 'yyy'] }
+
+  scenes         Scene[]
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  @@index([status, sortOrder])
+}
+
+// ============================================================
+// 二级场景
 // ============================================================
 
 model Scene {
   id            String        @id @default(cuid())
   slug          String        @unique
   name          String
-  groupName     String                                  // "家" / "校园" / "户外" / "城市"
+  groupName     String                                  // 兼容字段，新记录请用 sceneGroupId
+  sceneGroupId  String?
+  sceneGroup    SceneGroup?   @relation(fields: [sceneGroupId], references: [id])
   description   String?
   coverUrl      String?
-  sceneImageUrl String?                                 // 2.5D 大图（缺失时前端用 SVG 模板）
+  sceneImageUrl String?                                 // 2.5D 大图
+  sceneImagePrompt String?                              // AI 文生图提示词
   iconKind      String?                                 // home/school/park/hospital/mall
   themeColor    String?                                 // sun/ocean/leaf/coral/berry
   isDefault     Boolean       @default(false)
   unlockHint    String?
-  mapPosition   Json?                                   // {x, y} 百分比
+  isLocked      Boolean       @default(false)
+  unlockConditions Json?                                // { type: 'after_groups', groupIds: [...] }
+  mapPosition   Json?                                   // {x, y} 百分比，在一级地图上的位置（不再编辑，遗留字段）
   status        ContentStatus @default(DRAFT)
   sortOrder     Int           @default(0)
 
@@ -89,6 +143,7 @@ model Scene {
   deletedAt     DateTime?
 
   @@index([status, sortOrder])
+  @@index([sceneGroupId])
 }
 
 // ============================================================
@@ -104,6 +159,7 @@ model Item {
 
   coverUrl            String?
   itemImageUrl        String?
+  iconUrl             String?    // 简笔卡通图标，用于紧凑预览（如知识点详情首屏的关联物品）
   svgSymbolId         String?
 
   shortDesc           String
@@ -146,10 +202,16 @@ model KnowledgePoint {
   content         String
   illustrationUrl String?
 
+  // 知识点介绍视频（与 Item 视频字段对齐）
+  videoTitle       String?
+  videoDurationSec Int?
+  videoUrl         String?
+
   status          ContentStatus @default(DRAFT)
 
   items           ItemKnowledgePoint[]
   experiments     ExperimentKnowledgePoint[]
+  quizQuestions   QuizQuestion[]
   // 自关联（知识网络）
   relatedFrom     KnowledgeRelation[] @relation("fromKp")
   relatedTo       KnowledgeRelation[] @relation("toKp")
@@ -159,6 +221,30 @@ model KnowledgePoint {
   deletedAt       DateTime?
 
   @@index([subject, difficulty])
+  @@index([status])
+}
+
+// ============================================================
+// 考考你 · 知识点小测题（多选一）
+// ============================================================
+model QuizQuestion {
+  id               String        @id @default(cuid())
+  knowledgePointId String
+  knowledgePoint   KnowledgePoint @relation(fields: [knowledgePointId], references: [id], onDelete: Cascade)
+
+  question         String        // 题干
+  choices          Json          // string[] 4 个选项
+  correctIndex     Int           // 正确答案下标 0-3
+  explanation      String?       // 答完后展示的解析
+  difficulty       Difficulty    @default(L1)
+
+  status           ContentStatus @default(PUBLISHED)
+  sortOrder        Int           @default(0)
+
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([knowledgePointId, sortOrder])
   @@index([status])
 }
 
@@ -243,4 +329,45 @@ model KnowledgeRelation {
 
   @@id([fromId, toId])
   @@index([toId])
+}
+
+// ============================================================
+// AI 生图任务队列
+// ============================================================
+
+model AiTask {
+  id           String   @id @default(cuid())
+  // 实体类型：scene_group / scene / item / knowledge_point / experiment
+  entityType   String
+  entityId     String
+  // 生成目的：map_image / scene_image / cover / item_image / exploded / illustration / video_cover
+  purpose      String
+  prompt       String   @db.Text
+  modelId      String   // 对应 AdminSetting 中配置的模型 ID
+  // PENDING / RUNNING / DONE / FAILED
+  status       String   @default("PENDING")
+  progress     Int      @default(0)  // 0-100
+  resultUrl    String?
+  errorMessage String?
+  adminId      String
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([entityType, entityId])
+  @@index([status])
+  @@index([adminId, createdAt(sort: Desc)])
+}
+
+// ============================================================
+// 管理员设置（模型 & API Key 等键值对存储）
+// ============================================================
+
+model AdminSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique   // e.g. "ai_models" / "ai_default_model"
+  value     Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

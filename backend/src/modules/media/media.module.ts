@@ -11,5 +11,6 @@ import { LocalStorageService } from './local-storage.service';
   ],
   controllers: [MediaController],
   providers: [LocalStorageService],
+  exports: [LocalStorageService],
 })
 export class MediaModule {}

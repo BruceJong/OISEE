@@ -145,13 +145,13 @@ export function calcSceneProgress(items: ItemForProgress[], store?: Store): numb
   return sum / items.length;
 }
 
-/** L1 进度：所有未锁定 L2 子场景进度的平均 */
+/** L1 进度：所有未锁定 L2 子场景进度的平均（以 isLocked 为准） */
 export function calcL1Progress(
-  l1ChildScenes: Array<{ slug: string; unlockHint?: string | null; items?: ItemForProgress[] }>,
+  l1ChildScenes: Array<{ slug: string; isLocked?: boolean; items?: ItemForProgress[] }>,
   store?: Store,
 ): number {
   const s = store ?? load();
-  const unlocked = l1ChildScenes.filter(sc => !sc.unlockHint);
+  const unlocked = l1ChildScenes.filter(sc => !sc.isLocked);
   if (unlocked.length === 0) return 0;
   const sum = unlocked.reduce(
     (acc, sc) => acc + calcSceneProgress(sc.items ?? [], s),

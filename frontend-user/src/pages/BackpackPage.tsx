@@ -1,38 +1,41 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { contentApi } from '@/api/content';
+import { useProgress } from '@/utils/progress';
+import { useQuizStore, getCompletedKpSlugs } from '@/utils/quiz-store';
+import { useExperimentsStore } from '@/utils/experiments-store';
+import { useUserLevel, type UserLevel } from '@/utils/user-level';
+import { useAuth } from '@/utils/auth';
+import { getAvatar } from '@/utils/avatars';
+import { GRADE_STAGE_LABELS, type GradeStage } from '@oisee/shared';
 
-const userLevel = 'L2';
+/**
+ * 我的书包 —— 全部数据来自真实进度（localStorage）+ 已发布内容
+ * 积分规则：浏览知识点 ×10 · 小测满分 ×20 · 完成实验 ×50
+ */
+const POINTS = { kpViewed: 10, quizDone: 20, expDone: 50 };
 
-// 静态模拟数据（匹配原型）
-const USER = {
-  name: '小航',
-  avatarInitial: '航',
-  ageBand: '10-13',
-  difficulty: userLevel,
-  points: 320,
-  level: { num: 2, title: '观察员', current: 320, next: 500, prev: 200 },
-  explored: {
-    scenes: { done: 1, total: 7 },
-    items: { done: 3, total: 24 },
-    knowledge: { done: 7, total: 48 },
-  },
-  badges: [
-    { id: 'kitchen-rookie', name: '厨房新手', kind: 'explore', icon: '🍳', got: true, desc: '完成厨房 1 个物品的 L1 知识点' },
-    { id: 'physics-spark', name: '物理小火花', kind: 'subject', icon: '⚡', got: true, desc: '点亮 3 个物理知识点' },
-    { id: 'first-lab', name: '初次试验', kind: 'lab', icon: '🧪', got: true, desc: '完成第一个动手实验' },
-    { id: 'kitchen-master', name: '厨房小达人', kind: 'explore', icon: '👨‍🍳', got: false, desc: '完成厨房全部物品的 L1 知识点' },
-    { id: 'chem-explorer', name: '化学探险家', kind: 'subject', icon: '🧬', got: false, desc: '点亮 10 个化学知识点' },
-    { id: 'lab-junior', name: '初级实验家', kind: 'lab', icon: '🔬', got: false, desc: '完成 5 个实验' },
-    { id: 'all-house', name: '全屋通', kind: 'explore', icon: '🏠', got: false, desc: '完成「家」全场景探索' },
-    { id: 'lab-master', name: '实验大师', kind: 'lab', icon: '🏆', got: false, desc: '完成 20 个实验' },
-  ],
-};
+const LEVELS = [
+  { num: 1, title: '新手观察员', from: 0 },
+  { num: 2, title: '观察员',     from: 100 },
+  { num: 3, title: '探索者',     from: 300 },
+  { num: 4, title: '研究员',     from: 600 },
+  { num: 5, title: '小科学家',   from: 1000 },
+  { num: 6, title: '科学大师',   from: 1600 },
+];
 
-type BadgeTab = 'all' | 'explore' | 'subject' | 'lab';
+const LEVEL_OPTIONS: Array<{ value: UserLevel; label: string; desc: string }> = [
+  { value: 'L1', label: 'L1 启蒙', desc: '6-9 岁' },
+  { value: 'L2', label: 'L2 探索', desc: '10-13 岁' },
+  { value: 'L3', label: 'L3 深化', desc: '14-16 岁' },
+];
+
+type BadgeTab = 'all' | 'explore' | 'quiz' | 'lab';
 
 const KIND_MAP: Record<string, { label: string; en: string }> = {
   explore: { label: '探索类', en: 'EXPLORE' },
-  subject: { label: '学科类', en: 'SUBJECT' },
+  quiz:    { label: '答题类', en: 'QUIZ' },
   lab:     { label: '实验类', en: 'LABORATORY' },
 };
 
@@ -40,8 +43,64 @@ export function BackpackPage() {
   const nav = useNavigate();
   const [tab, setTab] = useState<BadgeTab>('all');
 
-  const levelPct = (USER.level.current - USER.level.prev) / (USER.level.next - USER.level.prev);
-  const filtered = tab === 'all' ? USER.badges : USER.badges.filter(b => b.kind === tab);
+  const { user } = useAuth();
+  const av = getAvatar(user?.avatar);
+  const gradeLabel = user?.gradeStage ? GRADE_STAGE_LABELS[user.gradeStage as GradeStage] : null;
+  const { level, setLevel } = useUserLevel();
+  const { calcItemProgress, calcSceneProgress, getStore } = useProgress();
+  useQuizStore();                 // 订阅小测变化
+  const { getDoneExperimentSlugs } = useExperimentsStore();
+
+  const { data: scenes = [] } = useQuery({ queryKey: ['public', 'scenes'], queryFn: contentApi.scenes });
+  const { data: items = [] }  = useQuery({ queryKey: ['public', 'items'], queryFn: contentApi.items });
+  const { data: kps = [] }    = useQuery({ queryKey: ['public', 'kps'], queryFn: () => contentApi.knowledgeList({}) });
+  const { data: exps = [] }   = useQuery({ queryKey: ['public', 'experiments'], queryFn: contentApi.experimentList });
+
+  // ── 真实进度统计 ──
+  const publishedKpSlugs = new Set(kps.map(k => k.slug));
+  const store = getStore();
+  const viewedKpSlugs = new Set(
+    Object.values(store.items).flatMap(rec => rec.viewedKPSlugs).filter(s => publishedKpSlugs.has(s)),
+  );
+  const quizDoneSlugs = getCompletedKpSlugs().filter(s => publishedKpSlugs.has(s));
+  const expDoneSlugs = getDoneExperimentSlugs().filter(s => exps.some(e => e.slug === s));
+
+  const itemsDone = items.filter(it => calcItemProgress(it as any) >= 0.99).length;
+  const scenesDone = scenes.filter(
+    sc => (sc.items?.length ?? 0) > 0 && calcSceneProgress((sc.items ?? []) as any) >= 0.99,
+  ).length;
+
+  const explored = {
+    scenes:    { done: scenesDone, total: scenes.length },
+    items:     { done: itemsDone, total: items.length },
+    knowledge: { done: viewedKpSlugs.size, total: kps.length },
+  };
+
+  // ── 积分 / 等级 ──
+  const points =
+    viewedKpSlugs.size * POINTS.kpViewed +
+    quizDoneSlugs.length * POINTS.quizDone +
+    expDoneSlugs.length * POINTS.expDone;
+  let lvIdx = 0;
+  for (let i = LEVELS.length - 1; i >= 0; i--) {
+    if (points >= LEVELS[i]!.from) { lvIdx = i; break; }
+  }
+  const lv = LEVELS[lvIdx]!;
+  const nextLv = LEVELS[lvIdx + 1];
+  const levelPct = nextLv ? (points - lv.from) / (nextLv.from - lv.from) : 1;
+
+  // ── 勋章（全部由真实进度推导） ──
+  const badges = [
+    { id: 'first-item', name: '初次探索',   kind: 'explore', icon: '🔍', got: itemsDone >= 1,            desc: '完整探索 1 件物品' },
+    { id: 'item-10',    name: '物品达人',   kind: 'explore', icon: '🧰', got: itemsDone >= 10,           desc: '完整探索 10 件物品' },
+    { id: 'scene-1',    name: '场景通',     kind: 'explore', icon: '🏠', got: scenesDone >= 1,           desc: '完成 1 个场景的全部物品' },
+    { id: 'scene-5',    name: '世界探索者', kind: 'explore', icon: '🗺️', got: scenesDone >= 5,           desc: '完成 5 个场景探索' },
+    { id: 'quiz-1',     name: '答题新星',   kind: 'quiz',    icon: '✨', got: quizDoneSlugs.length >= 1,  desc: '1 个知识点小测满分' },
+    { id: 'quiz-10',    name: '满分收割机', kind: 'quiz',    icon: '🏅', got: quizDoneSlugs.length >= 10, desc: '10 个知识点小测满分' },
+    { id: 'lab-1',      name: '初次试验',   kind: 'lab',     icon: '🧪', got: expDoneSlugs.length >= 1,   desc: '完成第一个动手实验' },
+    { id: 'lab-5',      name: '初级实验家', kind: 'lab',     icon: '🔬', got: expDoneSlugs.length >= 5,   desc: '完成 5 个动手实验' },
+  ];
+  const filtered = tab === 'all' ? badges : badges.filter(b => b.kind === tab);
 
   return (
     <div>
@@ -56,35 +115,70 @@ export function BackpackPage() {
             {/* 头像 */}
             <div style={{
               width: 120, height: 120, borderRadius: 999,
-              background: 'var(--amber)', color: 'var(--ink)',
+              background: av.bg, color: 'var(--paper)',
               display: 'grid', placeItems: 'center',
-              fontSize: 48, fontWeight: 700, fontFamily: 'var(--font-display)',
+              fontSize: 56,
             }}>
-              {USER.avatarInitial}
+              {av.emoji}
             </div>
-            {/* 中：姓名 + 进度 */}
+            {/* 中：身份 + 等级 + 进度 */}
             <div>
               <div className="eyebrow" style={{ color: 'var(--amber)' }}>／  我的书包 · MY BACKPACK</div>
-              <h1 style={{ marginTop: 12, color: 'var(--paper)', fontSize: 56 }}>{USER.name}</h1>
-              <div style={{ marginTop: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
-                <span className="tag" style={{ borderColor: 'rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.75)' }}>{USER.ageBand} 岁</span>
-                <span className="tag" style={{ background: 'var(--amber)', borderColor: 'var(--amber)', color: 'var(--ink)' }}>难度 {USER.difficulty}</span>
-                <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13 }}>· Lv{USER.level.num} {USER.level.title}</span>
+              <h1 style={{ marginTop: 12, color: 'var(--paper)', fontSize: 48 }}>{user?.nickname ?? '科学探索者'}</h1>
+              <div style={{ marginTop: 10, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ padding: '4px 12px', borderRadius: 999, background: 'var(--amber)', color: 'var(--ink)', fontSize: 13, fontWeight: 700 }}>
+                  Lv{lv.num} {lv.title}
+                </span>
+                {gradeLabel && (
+                  <span style={{ padding: '4px 12px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.3)', color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 600 }}>
+                    🎓 {gradeLabel}
+                  </span>
+                )}
+              </div>
+              <div style={{ marginTop: 12, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* 难度切换：内容按所选难度解锁 */}
+                <div style={{ display: 'flex', gap: 4, border: '1px solid rgba(255,255,255,0.25)', borderRadius: 999, padding: 3 }}>
+                  {LEVEL_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setLevel(opt.value)}
+                      title={opt.desc}
+                      style={{
+                        padding: '5px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+                        border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                        background: level === opt.value ? 'var(--amber)' : 'transparent',
+                        color: level === opt.value ? 'var(--ink)' : 'rgba(255,255,255,0.75)',
+                        transition: 'background .15s',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13 }}>
+                  当前难度 {level} · 高于此难度的内容将锁定
+                </span>
               </div>
               <div style={{ marginTop: 24, maxWidth: 520 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 8, color: 'rgba(255,255,255,0.55)' }}>
-                  <span>距离 Lv{USER.level.num + 1}</span>
-                  <span className="font-mono">{USER.level.current} / {USER.level.next} pt</span>
+                  <span>{nextLv ? `距离 Lv${nextLv.num} ${nextLv.title}` : '已到最高等级'}</span>
+                  <span className="font-mono">{points}{nextLv ? ` / ${nextLv.from}` : ''} pt</span>
                 </div>
                 <div style={{ height: 3, background: 'rgba(255,255,255,0.12)', borderRadius: 999, overflow: 'hidden' }}>
-                  <div style={{ width: `${levelPct * 100}%`, height: '100%', background: 'var(--amber)', transition: 'width .5s ease' }}/>
+                  <div style={{ width: `${Math.min(1, levelPct) * 100}%`, height: '100%', background: 'var(--amber)', transition: 'width .5s ease' }}/>
+                </div>
+                <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', letterSpacing: 0.5 }}>
+                  知识点 ×{POINTS.kpViewed} · 小测满分 ×{POINTS.quizDone} · 实验 ×{POINTS.expDone}
                 </div>
               </div>
             </div>
             {/* 右：积分 */}
             <div style={{ textAlign: 'right' }}>
               <div className="font-mono" style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', letterSpacing: 2 }}>TOTAL POINTS</div>
-              <div className="font-display" style={{ fontSize: 88, color: 'var(--amber)', lineHeight: 1 }}>{USER.points}</div>
+              <div className="font-display" style={{ fontSize: 88, color: 'var(--amber)', lineHeight: 1 }}>{points}</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+                已完成 {expDoneSlugs.length} 个实验 · {quizDoneSlugs.length} 次满分
+              </div>
             </div>
           </div>
         </div>
@@ -95,9 +189,9 @@ export function BackpackPage() {
         <div className="eyebrow">／  EXPLORATION · 探索度</div>
         <h2 style={{ marginTop: 14, fontSize: 36 }}>你已经走了这么远</h2>
         <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, border: '1px solid var(--hairline)', background: 'var(--paper)' }}>
-          <ExploreCell label="场景" en="SCENES" v={USER.explored.scenes} color="var(--blue)" first/>
-          <ExploreCell label="物品" en="ITEMS" v={USER.explored.items} color="var(--coral)"/>
-          <ExploreCell label="知识点" en="KNOWLEDGE" v={USER.explored.knowledge} color="var(--amber)"/>
+          <ExploreCell label="场景" en="SCENES" v={explored.scenes} color="var(--blue)" first/>
+          <ExploreCell label="物品" en="ITEMS" v={explored.items} color="var(--coral)"/>
+          <ExploreCell label="知识点" en="KNOWLEDGE" v={explored.knowledge} color="var(--amber)"/>
         </div>
       </section>
 
@@ -106,7 +200,7 @@ export function BackpackPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32 }}>
           <div>
             <div className="eyebrow">／  BADGES · 勋章墙</div>
-            <h2 style={{ marginTop: 14, fontSize: 36 }}>已获得 {USER.badges.filter(b => b.got).length} / {USER.badges.length}</h2>
+            <h2 style={{ marginTop: 14, fontSize: 36 }}>已获得 {badges.filter(b => b.got).length} / {badges.length}</h2>
           </div>
           <div style={{ display: 'flex', gap: 4, border: '1px solid var(--hairline)', borderRadius: 999, padding: 4 }}>
             <button onClick={() => setTab('all')} style={pillBtn(tab === 'all')}>全部</button>
@@ -123,15 +217,15 @@ export function BackpackPage() {
       {/* 知识星图 */}
       <section className="page" style={{ paddingTop: 16 }}>
         <div className="eyebrow">／  CONSTELLATION · 知识星图</div>
-        <h2 style={{ marginTop: 14, fontSize: 36 }}>已点亮 {USER.explored.knowledge.done} 颗星</h2>
+        <h2 style={{ marginTop: 14, fontSize: 36 }}>已点亮 {explored.knowledge.done} 颗星</h2>
         <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 56, alignItems: 'center', padding: 48, background: 'var(--ink)', color: 'var(--paper)', borderRadius: 12 }}>
           <div>
             <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.8, fontSize: 16 }}>
-              每学完一个知识点，知识网络里就有一颗星会被点亮。继续探索，把整片宇宙点亮吧。
+              每浏览一个知识点，知识网络里就有一颗星会被点亮。继续探索，把整片宇宙点亮吧。
             </p>
             <button className="btn amber" style={{ marginTop: 28 }} onClick={() => nav('/knowledge')}>查看完整知识网络</button>
           </div>
-          <Constellation done={USER.explored.knowledge.done} total={USER.explored.knowledge.total}/>
+          <Constellation done={explored.knowledge.done} total={Math.max(explored.knowledge.total, 1)}/>
         </div>
       </section>
     </div>
@@ -139,7 +233,7 @@ export function BackpackPage() {
 }
 
 function ExploreCell({ label, en, v, color, first }: { label: string; en: string; v: { done: number; total: number }; color: string; first?: boolean }) {
-  const pct = v.done / v.total;
+  const pct = v.total > 0 ? v.done / v.total : 0;
   return (
     <div style={{ padding: 36, borderLeft: first ? 'none' : '1px solid var(--hairline)' }}>
       <div className="font-mono" style={{ fontSize: 11, color, letterSpacing: 2, fontWeight: 600 }}>{en}</div>
@@ -165,7 +259,10 @@ function pillBtn(active: boolean): React.CSSProperties {
   };
 }
 
-function BadgeCard({ b, kind }: { b: typeof USER.badges[0]; kind: { label: string; en: string } }) {
+function BadgeCard({ b, kind }: {
+  b: { id: string; name: string; icon: string; got: boolean; desc: string };
+  kind: { label: string; en: string };
+}) {
   return (
     <div className={`card ${b.got ? '' : 'locked'}`} style={{ padding: 28, textAlign: 'center', position: 'relative' }}>
       <div style={{

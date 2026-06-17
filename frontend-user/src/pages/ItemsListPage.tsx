@@ -4,6 +4,9 @@ import { Link } from 'react-router-dom';
 import { contentApi, type PublicItem } from '@/api/content';
 import { useProgress } from '@/utils/progress';
 import { Pagination } from '@/components/Pagination';
+import { useAuth } from '@/utils/auth';
+import { ANON_LIMIT } from '@/utils/gate';
+import { LockedCard, AnonGateBanner } from '@/components/AnonGate';
 
 const PAGE_SIZE = 20;
 
@@ -24,6 +27,7 @@ type StatusFilter = 'all' | 'not-started' | 'in-progress' | 'done';
 
 export function ItemsListPage() {
   const { calcItemProgress } = useProgress();
+  const { isAuthed } = useAuth();
 
   const [filters, setFilters] = useState({
     l1: new Set<string>(),
@@ -144,7 +148,7 @@ export function ItemsListPage() {
         <main>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24 }}>
             <span className="font-mono" style={{ fontSize: 11, color: 'var(--ink-3)', letterSpacing: 2 }}>
-              {isLoading ? '加载中...' : `${filtered.length} / ${items.length} 个物品`}
+              {isLoading ? '加载中...' : !isAuthed ? `前 ${ANON_LIMIT} 条 · 登录查看全部 ${items.length} 个` : `${filtered.length} / ${items.length} 个物品`}
             </span>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {[...filters.l1].map(g => (
@@ -160,7 +164,19 @@ export function ItemsListPage() {
             </div>
           </div>
 
-          {filtered.length === 0 ? (
+          {!isAuthed ? (
+            items.length === 0 ? (
+              <div className="placeholder" style={{ height: 320 }}><div>暂无物品</div></div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+                  {items.slice(0, ANON_LIMIT).map(it => <ItemCard key={it.id} item={it} />)}
+                  {items.length > ANON_LIMIT && <><LockedCard /><LockedCard /><LockedCard /></>}
+                </div>
+                {items.length > ANON_LIMIT && <AnonGateBanner total={items.length} />}
+              </>
+            )
+          ) : filtered.length === 0 ? (
             <div className="placeholder" style={{ height: 320 }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 40, opacity: 0.3, marginBottom: 10 }}>🔍</div>

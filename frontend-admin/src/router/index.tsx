@@ -2,12 +2,11 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { LoginPage } from '@/pages/LoginPage';
 import { DashboardPage } from '@/pages/DashboardPage';
-import { SceneListPage } from '@/pages/scenes/SceneListPage';
-import { SceneEditPage } from '@/pages/scenes/SceneEditPage';
-import { ItemListPage } from '@/pages/items/ItemListPage';
-import { ItemEditPage } from '@/pages/items/ItemEditPage';
-import { KnowledgeListPage } from '@/pages/knowledge/KnowledgeListPage';
-import { KnowledgeEditPage } from '@/pages/knowledge/KnowledgeEditPage';
+import { SceneManagePage } from '@/pages/scenes-manage/SceneManagePage';
+import { ItemManagePage } from '@/pages/items-manage/ItemManagePage';
+import { KnowledgeManagePage } from '@/pages/knowledge-manage/KnowledgeManagePage';
+import { ExperimentManagePage } from '@/pages/experiments-manage/ExperimentManagePage';
+import { SettingsPage } from '@/pages/settings/SettingsPage';
 import { useAuthStore } from '@/stores/auth';
 
 function RequireAuth() {
@@ -27,20 +26,19 @@ export const router = createBrowserRouter(
           element: <AppLayout />,
           children: [
             { index: true, element: <DashboardPage /> },
-            { path: 'scenes', element: <SceneListPage /> },
-            { path: 'scenes/new', element: <SceneEditPage /> },
-            { path: 'scenes/:id', element: <SceneEditPage /> },
-            { path: 'items', element: <ItemListPage /> },
-            { path: 'items/new', element: <ItemEditPage /> },
-            { path: 'items/:id', element: <ItemEditPage /> },
-            { path: 'knowledge', element: <KnowledgeListPage /> },
-            { path: 'knowledge/new', element: <KnowledgeEditPage /> },
-            { path: 'knowledge/:id', element: <KnowledgeEditPage /> },
+            { path: 'scenes',    element: <SceneManagePage /> },
+            { path: 'items',     element: <ItemManagePage /> },
+            { path: 'knowledge', element: <KnowledgeManagePage /> },
+            { path: 'experiments', element: <ExperimentManagePage /> },
+            { path: 'settings',  element: <SettingsPage /> },
+            // 兼容旧链接
+            { path: 'quick',   element: <Navigate to="/scenes" replace /> },
+            { path: 'content', element: <Navigate to="/items" replace /> },
           ],
         },
       ],
     },
     { path: '*', element: <Navigate to="/" replace /> },
   ],
-  { basename: '/cms' }
+  { basename: '/cms/' }
 );

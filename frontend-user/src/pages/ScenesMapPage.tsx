@@ -5,13 +5,12 @@ import { contentApi, type PublicScene } from '@/api/content';
 import { useProgress } from '@/utils/progress';
 
 /* ────────────────────────────────────────────────────────────────
-   地图：4096×2304（16:9）  MAP_SCALE=1.4
-   坐标全部按图片百分比（x/y ∈ [0,100]）
-   每个 L1 地点：
-     • box {l,t,r,b}：可点击建筑热区矩形
-     • door {x,y}：选中态 3D 立柱落点
+   地图：MAP_SCALE=1.3，坐标全部按图片百分比（x/y ∈ [0,100]）
+   • 优先使用管理端 SceneGroup.mapPosition 中保存的坐标和点击半径
+   • 缺失时回退到本文件硬编码的 FALLBACK_LOCATIONS
+   • 地图图片优先来自管理端 world_map 设置；缺失时回退 FALLBACK_MAP_URL
 ──────────────────────────────────────────────────────────────── */
-const MAP_URL   = 'http://localhost:3000/uploads/home/map-v11.png';
+const FALLBACK_MAP_URL = '/uploads/home/map-v11.png';
 const MAP_SCALE = 1.3;
 
 type Box = { l: number; t: number; r: number; b: number };
@@ -23,36 +22,37 @@ type Loc = {
   box: Box;
   door: { x: number; y: number };
   color: string;
+  isLocked?: boolean;
+  unlockHint?: string | null;
 };
 
-// 坐标按 map-v11.png（wan2.7-image-pro 参考 sample_map_2.jpg 生成）标定
-// 注：本图建筑非常密集且大多为通用小镇住宅风格，仅医院红十字标志醒目。
-// 其余建筑按位置粗略估计，可在内容管理端进一步微调。
-const LOCATIONS: readonly Loc[] = [
-  // 家：左上小红顶住宅
-  { slug: 'loc-home',    name: '我的家',  groupName: 'home',        color: '#D89531',
+const THEME_COLOR_MAP: Record<string, string> = {
+  sun:   '#D89531',
+  ocean: '#305FBE',
+  leaf:  '#4A8662',
+  coral: '#C95746',
+  berry: '#6B4D8C',
+};
+
+// 缺省坐标（管理端未设置时使用）
+const FALLBACK_LOCATIONS: readonly Loc[] = [
+  { slug: 'loc-home',    name: '我的家',  groupName: 'loc-home',    color: '#D89531',
     box: { l: 2,  t: 12, r: 22, b: 40 }, door: { x: 12, y: 30 } },
-  // 学校：左中长蓝顶大楼
   { slug: 'school',      name: '学校',    groupName: 'school',      color: '#305FBE',
     box: { l: 14, t: 22, r: 36, b: 46 }, door: { x: 24, y: 40 } },
-  // 医院：中央红十字白楼（唯一明显标识）
   { slug: 'hospital',    name: '医院',    groupName: 'hospital',    color: '#C95746',
     box: { l: 36, t: 38, r: 56, b: 62 }, door: { x: 46, y: 56 } },
-  // 商场：右中现代灰顶平顶建筑
   { slug: 'mall',        name: '商场',    groupName: 'mall',        color: '#6B4D8C',
     box: { l: 38, t: 64, r: 60, b: 88 }, door: { x: 47, y: 80 } },
-  // 公园：右上喷泉+绿地
   { slug: 'park',        name: '公园',    groupName: 'park',        color: '#4A8662',
     box: { l: 70, t: 4,  r: 99, b: 28 }, door: { x: 82, y: 22 } },
-  // 超市：左下带遮阳篷店面
   { slug: 'supermarket', name: '超市',    groupName: 'supermarket', color: '#D89531',
     box: { l: 8,  t: 60, r: 32, b: 84 }, door: { x: 18, y: 76 } },
-  // 游乐场：右下橙色装饰区
   { slug: 'playground',  name: '游乐场',  groupName: 'playground',  color: '#6B4D8C',
     box: { l: 62, t: 70, r: 90, b: 98 }, door: { x: 74, y: 86 } },
 ];
 
-type LocSlug = (typeof LOCATIONS)[number]['slug'];
+type LocSlug = string;
 
 const THEME: Record<string, { bg: string; accent: string }> = {
   sun:   { bg: 'rgba(216,149,49,0.10)',  accent: '#D89531' },
@@ -86,6 +86,55 @@ export function ScenesMapPage() {
     queryKey: ['public', 'scenes'],
     queryFn: contentApi.scenes,
   });
+  // 一级场景（管理端配置的位置 / 颜色）
+  const { data: sceneGroups = [] } = useQuery({
+    queryKey: ['public', 'scene-groups'],
+    queryFn: contentApi.sceneGroups,
+  });
+  // 世界地图（管理端配置）
+  const { data: worldMap } = useQuery({
+    queryKey: ['public', 'world-map'],
+    queryFn: contentApi.worldMap,
+  });
+
+  // 完整 URL 原样使用；相对路径（/uploads/...）开发走 Vite 代理，生产同源
+  const MAP_URL = worldMap?.imageUrl || FALLBACK_MAP_URL;
+
+  // 合并：管理端配置 > 硬编码回退
+  const LOCATIONS: Loc[] = (() => {
+    const result: Loc[] = [];
+    // 1) 以管理端 sceneGroups 为优先源
+    for (const g of sceneGroups) {
+      const fallback = FALLBACK_LOCATIONS.find(l => l.slug === g.slug);
+      const mp = g.mapPosition;
+      const color = (g.themeColor && THEME_COLOR_MAP[g.themeColor]) || fallback?.color || '#888';
+
+      if (mp && typeof mp.x === 'number' && typeof mp.y === 'number') {
+        const r = mp.radius ?? 10;
+        result.push({
+          slug: g.slug,
+          name: g.name,
+          groupName: g.slug,
+          box: {
+            l: Math.max(0,   mp.x - r),
+            t: Math.max(0,   mp.y - r),
+            r: Math.min(100, mp.x + r),
+            b: Math.min(100, mp.y + r),
+          },
+          door: { x: mp.x, y: mp.y },
+          color,
+          isLocked: g.isLocked,
+          unlockHint: g.unlockHint,
+        });
+      } else if (fallback) {
+        result.push({ ...fallback, name: g.name, color, isLocked: g.isLocked, unlockHint: g.unlockHint });
+      }
+    }
+    // 2) 若管理端尚未返回数据，使用全量硬编码
+    if (result.length === 0) return [...FALLBACK_LOCATIONS] as Loc[];
+    return result;
+  })();
+
   const [activeSlug, setActiveSlug] = useState<LocSlug | null>(null);
   const activeLoc  = LOCATIONS.find(l => l.slug === activeSlug) ?? null;
   // 子场景过滤：以 L1 slug 为 groupName，且排除 L1 自身（避免自引用进列表）
@@ -133,10 +182,18 @@ export function ScenesMapPage() {
     animTimerRef.current = setTimeout(() => setIsAnimating(false), 650);
   }
 
+  /* 锁定提示 toast 状态 */
+  const [lockToast, setLockToast] = useState<{ name: string; hint?: string | null } | null>(null);
+
   /* 事件 */
   function handleHotspotClick(slug: LocSlug, e: React.MouseEvent) {
     e.stopPropagation();
     const loc = LOCATIONS.find(l => l.slug === slug)!;
+    if (loc.isLocked) {
+      setLockToast({ name: loc.name, hint: loc.unlockHint });
+      setTimeout(() => setLockToast(null), 2800);
+      return;
+    }
     setActiveSlug(slug);
     centerLoc(loc);
   }
@@ -249,6 +306,28 @@ export function ScenesMapPage() {
           ))}
         </div>
 
+        {/* 锁定提示 toast */}
+        {lockToast && (
+          <div style={{
+            position: 'absolute', top: 24, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 50,
+            background: 'rgba(14,26,51,0.92)', color: '#fff',
+            padding: '14px 22px', borderRadius: 14,
+            boxShadow: '0 12px 36px rgba(0,0,0,0.32)',
+            maxWidth: 420, animation: 'lockToastIn 0.25s ease-out',
+            pointerEvents: 'none',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <span style={{ fontSize: 18 }}>🔒</span>
+              <strong style={{ fontSize: 14 }}>{lockToast.name} 暂时锁定</strong>
+            </div>
+            <div style={{ fontSize: 13, opacity: 0.85, lineHeight: 1.5 }}>
+              {lockToast.hint || '完成前置探索后即可解锁。'}
+            </div>
+          </div>
+        )}
+        <style>{`@keyframes lockToastIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}`}</style>
+
         {/* 晕影 */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 15,
@@ -307,7 +386,7 @@ function BuildingHotspot({ loc, active, onHotspotClick }: {
   onHotspotClick: (e: React.MouseEvent) => void;
 }) {
   const [hov, setHov] = useState(false);
-  const { box, door, color } = loc;
+  const { box, door, color, isLocked } = loc;
   const w = box.r - box.l;
   const h = box.b - box.t;
 
@@ -322,14 +401,14 @@ function BuildingHotspot({ loc, active, onHotspotClick }: {
           width:  `${w}%`,
           height: `${h}%`,
           zIndex: 7,
-          cursor: 'pointer',
+          cursor: isLocked ? 'not-allowed' : 'pointer',
           borderRadius: 8,
           border: hov || active
-            ? `1.5px dashed ${color}`
+            ? `1.5px dashed ${isLocked ? '#888' : color}`
             : '1.5px dashed transparent',
-          background: hov && !active
-            ? `${color}14`
-            : 'transparent',
+          background: isLocked
+            ? 'rgba(14,26,51,0.18)'
+            : (hov && !active ? `${color}14` : 'transparent'),
           transition: 'background .18s ease, border-color .18s ease',
         }}
         onMouseDown={(e) => e.stopPropagation()}
@@ -337,6 +416,20 @@ function BuildingHotspot({ loc, active, onHotspotClick }: {
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
       >
+        {/* 锁定徽章（始终显示） */}
+        {isLocked && (
+          <div style={{
+            position: 'absolute',
+            left: '50%', top: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 32, height: 32, borderRadius: '50%',
+            background: 'rgba(14,26,51,0.85)',
+            color: '#fff', fontSize: 17,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+            pointerEvents: 'none',
+          }}>🔒</div>
+        )}
         {/* hover 提示名牌（不在选中态显示） */}
         {hov && !active && (
           <div style={{
@@ -466,17 +559,17 @@ function InfoPanel({ location, subScenes, visible, onClose, onEnterScene }: {
   // 订阅进度 → 物品 KP/视频进度更新时本面板自动重渲染
   const { calcSceneProgress, calcL1Progress } = useProgress();
 
-  const unlockedCount = subScenes.filter(s => !s.unlockHint).length;
+  const unlockedCount = subScenes.filter(s => !s.isLocked).length;
   const totalCount    = subScenes.length;
 
   // 真实 L1 探索度：所有未锁定 L2 进度的平均
   const l1Progress = calcL1Progress(
-    subScenes.map(sc => ({ slug: sc.slug, unlockHint: sc.unlockHint, items: sc.items ?? [] })),
+    subScenes.map(sc => ({ slug: sc.slug, isLocked: sc.isLocked, items: sc.items ?? [] })),
   );
   const progressPct = Math.round(l1Progress * 100);
   // 完成数 = 进度 ≥ 99% 的子场景数
   const exploredCount = subScenes.filter(
-    sc => !sc.unlockHint && calcSceneProgress(sc.items ?? []) >= 0.99,
+    sc => !sc.isLocked && calcSceneProgress(sc.items ?? []) >= 0.99,
   ).length;
 
   return (
@@ -586,7 +679,7 @@ function SubSceneRow({ scene, index, accentColor: _ac, onEnter }: {
   const { calcSceneProgress } = useProgress();
   const th = THEME[scene.themeColor ?? ''] ?? { bg: 'rgba(14,26,51,0.05)', accent: 'var(--ink-3)' };
   const itemCount = scene._count?.items ?? 0;
-  const isLocked  = !!scene.unlockHint;
+  const isLocked  = !!scene.isLocked;
 
   // 该 L2 实际探索度（仅未锁定时计算）
   const l2Progress = isLocked ? 0 : calcSceneProgress(scene.items ?? []);
@@ -644,7 +737,7 @@ function SubSceneRow({ scene, index, accentColor: _ac, onEnter }: {
             marginTop: 2, fontSize: 10,
             color: 'var(--ink-4)', lineHeight: 1.3,
           }}>
-            🔒 {scene.unlockHint}
+            🔒 {scene.unlockHint || '完成前置探索后解锁'}
           </div>
         ) : itemCount > 0 ? (
           <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>

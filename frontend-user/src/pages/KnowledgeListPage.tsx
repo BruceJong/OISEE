@@ -3,13 +3,40 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { contentApi } from '@/api/content';
 import { Pagination } from '@/components/Pagination';
+import { KnowledgeNetwork3D } from '@/components/KnowledgeNetwork3D';
+import { useUserLevel } from '@/utils/user-level';
+import { useAuth } from '@/utils/auth';
+import { ANON_LIMIT } from '@/utils/gate';
+import { LockedCard, AnonGateBanner } from '@/components/AnonGate';
 
 const PAGE_SIZE = 20;
 
-const userLevel = 'L2';
+/* 3D 知识网络视图 —— 数据按需加载（首次切到 network 才发请求） */
+function NetworkView() {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['public', 'knowledge-network'],
+    queryFn: contentApi.knowledgeNetwork,
+  });
+
+  if (isLoading) return (
+    <div className="placeholder" style={{ height: 560 }}>
+      <div className="font-mono" style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 2 }}>
+        LOADING NETWORK…
+      </div>
+    </div>
+  );
+  if (isError || !data) return (
+    <div className="placeholder" style={{ height: 560 }}>
+      <div>知识网络加载失败</div>
+    </div>
+  );
+  return <KnowledgeNetwork3D data={data} height={620} />;
+}
+
 const ORDER: Record<string, number> = { L1: 1, L2: 2, L3: 3 };
 
 export function KnowledgeListPage() {
+  const { isAuthed } = useAuth();
   const [view, setView] = useState<'cards' | 'network'>('cards');
   const [filters, setFilters] = useState({
     subjects: new Set<string>(),
@@ -29,7 +56,7 @@ export function KnowledgeListPage() {
     let list = knowledge.filter(k => {
       if (filters.subjects.size && !filters.subjects.has(k.subject)) return false;
       if (filters.levels.size && !filters.levels.has(k.difficulty)) return false;
-      if (filters.q && !k.name.includes(filters.q) && !(k as any).desc?.includes(filters.q)) return false;
+      if (filters.q && !k.name.includes(filters.q) && !k.summary?.includes(filters.q)) return false;
       return true;
     });
     if (filters.sort === 'level-asc') list = [...list].sort((a, b) => (ORDER[a.difficulty] ?? 0) - (ORDER[b.difficulty] ?? 0));
@@ -65,10 +92,12 @@ export function KnowledgeListPage() {
             用卡片库找具体知识点，或者切换到网络视图看它们之间的联系。
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 4, border: '1px solid var(--hairline)', borderRadius: 999, padding: 4 }}>
-          <button onClick={() => setView('cards')} style={viewBtn(view === 'cards')}>卡片库</button>
-          <button onClick={() => setView('network')} style={viewBtn(view === 'network')}>知识网络</button>
-        </div>
+        {isAuthed && (
+          <div style={{ display: 'flex', gap: 4, border: '1px solid var(--hairline)', borderRadius: 999, padding: 4 }}>
+            <button onClick={() => setView('cards')} style={viewBtn(view === 'cards')}>卡片库</button>
+            <button onClick={() => setView('network')} style={viewBtn(view === 'network')}>知识网络</button>
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 40, alignItems: 'flex-start' }}>
@@ -120,7 +149,7 @@ export function KnowledgeListPage() {
         <main>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24 }}>
             <span className="font-mono" style={{ fontSize: 11, color: 'var(--ink-3)', letterSpacing: 2 }}>
-              {isLoading ? '加载中...' : `${filtered.length} / ${knowledge.length} 个知识点`}
+              {isLoading ? '加载中...' : !isAuthed ? `前 ${ANON_LIMIT} 条 · 登录查看全部 ${knowledge.length} 个` : `${filtered.length} / ${knowledge.length} 个知识点`}
             </span>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {[...filters.subjects].map(s => (
@@ -132,7 +161,19 @@ export function KnowledgeListPage() {
             </div>
           </div>
 
-          {view === 'cards' ? (
+          {!isAuthed ? (
+            knowledge.length === 0 ? (
+              <div className="placeholder" style={{ height: 320 }}><div>暂无知识点</div></div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+                  {knowledge.slice(0, ANON_LIMIT).map(k => <KnowledgeCard key={k.id} kp={k} />)}
+                  {knowledge.length > ANON_LIMIT && <><LockedCard /><LockedCard /><LockedCard /></>}
+                </div>
+                {knowledge.length > ANON_LIMIT && <AnonGateBanner total={knowledge.length} />}
+              </>
+            )
+          ) : view === 'cards' ? (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
                 {paged.map(k => <KnowledgeCard key={k.id} kp={k} />)}
@@ -140,12 +181,7 @@ export function KnowledgeListPage() {
               <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} onChange={setPage} />
             </>
           ) : (
-            <div className="placeholder" style={{ height: 400 }}>
-              <div>
-                <div style={{ fontSize: 48, opacity: 0.3, marginBottom: 12 }}>🕸</div>
-                <div>知识网络视图（即将上线）</div>
-              </div>
-            </div>
+            <NetworkView />
           )}
         </main>
       </div>
@@ -187,6 +223,7 @@ function Check({ label, count, checked, onChange }: { label: string; count?: num
 }
 
 function KnowledgeCard({ kp }: { kp: any }) {
+  const { level: userLevel } = useUserLevel();
   const locked = (ORDER[kp.difficulty] ?? 0) > (ORDER[userLevel] ?? 0);
   const SUBJECT_COLOR: Record<string, string> = { PHYSICS: '#305FBE', CHEMISTRY: '#C95746', BIOLOGY: '#4A8662', GEOGRAPHY: '#8C6B2A', OTHER: '#6B4D8C' };
   const SUBJECT_ICON: Record<string, string> = { PHYSICS: '⚛', CHEMISTRY: '⚗', BIOLOGY: '🧬', GEOGRAPHY: '🌍', OTHER: '🔬' };

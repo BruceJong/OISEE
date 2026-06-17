@@ -3,6 +3,25 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { BusinessException } from '../../common/exceptions/business.exception';
 import { ERROR_CODES } from '@oisee/shared';
 
+/**
+ * 级联可见性：场景可见要求其所属一级场景已发布（或无所属，兼容历史数据）；
+ * 物品可见要求其所属场景满足同样条件。
+ */
+const VISIBLE_SCENE_WHERE = {
+  status: 'PUBLISHED' as const,
+  deletedAt: null,
+  OR: [
+    { sceneGroupId: null },
+    { sceneGroup: { status: 'PUBLISHED' as const, deletedAt: null } },
+  ],
+};
+
+const VISIBLE_ITEM_WHERE = {
+  status: 'PUBLISHED' as const,
+  deletedAt: null,
+  scene: VISIBLE_SCENE_WHERE,
+};
+
 @Injectable()
 export class ContentService {
   constructor(private prisma: PrismaService) {}
@@ -10,7 +29,7 @@ export class ContentService {
   async listScenes() {
     // 返回 _count + 轻量 items（slug / videoDurationSec / KP slugs）供前端计算探索度
     return this.prisma.scene.findMany({
-      where: { status: 'PUBLISHED', deletedAt: null },
+      where: VISIBLE_SCENE_WHERE,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       include: {
         _count: { select: { items: true } },
@@ -30,7 +49,7 @@ export class ContentService {
 
   async getSceneBySlug(slug: string) {
     const scene = await this.prisma.scene.findFirst({
-      where: { slug, status: 'PUBLISHED', deletedAt: null },
+      where: { slug, ...VISIBLE_SCENE_WHERE },
       include: {
         items: {
           where: { status: 'PUBLISHED', deletedAt: null },
@@ -57,7 +76,7 @@ export class ContentService {
   async listItems() {
     // 物品仓库列表：每项带 scene 信息（含所属 L2 + 通过 groupName 推断 L1）+ KP 轻量数据
     return this.prisma.item.findMany({
-      where: { status: 'PUBLISHED', deletedAt: null },
+      where: VISIBLE_ITEM_WHERE,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       include: {
         scene: {
@@ -80,7 +99,7 @@ export class ContentService {
 
   async getItemBySlug(slug: string) {
     const item = await this.prisma.item.findFirst({
-      where: { slug, status: 'PUBLISHED', deletedAt: null },
+      where: { slug, ...VISIBLE_ITEM_WHERE },
       include: {
         scene: { select: { id: true, slug: true, name: true, groupName: true } },
         knowledgePoints: {
@@ -95,6 +114,18 @@ export class ContentService {
                 difficulty: true,
                 summary: true,
                 illustrationUrl: true,
+              },
+            },
+          },
+        },
+        experiments: {
+          where: { experiment: { status: 'PUBLISHED', deletedAt: null } },
+          select: {
+            experiment: {
+              select: {
+                id: true, slug: true, name: true,
+                difficulty: true, durationMin: true, needParent: true,
+                materialType: true, description: true, coverUrl: true,
               },
             },
           },
@@ -133,6 +164,7 @@ export class ContentService {
       where: { slug, status: 'PUBLISHED', deletedAt: null },
       include: {
         items: {
+          where: { item: VISIBLE_ITEM_WHERE },
           include: {
             item: {
               select: {
@@ -142,6 +174,7 @@ export class ContentService {
                 shortDesc: true,
                 svgSymbolId: true,
                 itemImageUrl: true,
+                iconUrl: true,
                 scene: { select: { slug: true, name: true } },
               },
             },
@@ -155,6 +188,29 @@ export class ContentService {
         relatedTo: {
           include: {
             from: { select: { id: true, slug: true, name: true, subject: true, difficulty: true, summary: true, illustrationUrl: true } },
+          },
+        },
+        quizQuestions: {
+          where: { status: 'PUBLISHED' },
+          orderBy: { sortOrder: 'asc' },
+          // 注意：correctIndex / explanation 不下发，判分走 POST /knowledge/quiz/:id/answer
+          select: {
+            id: true,
+            question: true,
+            choices: true,
+            difficulty: true,
+          },
+        },
+        experiments: {
+          where: { experiment: { status: 'PUBLISHED', deletedAt: null } },
+          select: {
+            experiment: {
+              select: {
+                id: true, slug: true, name: true,
+                difficulty: true, durationMin: true, needParent: true,
+                materialType: true, description: true, coverUrl: true,
+              },
+            },
           },
         },
       },
@@ -174,6 +230,33 @@ export class ContentService {
       related,
       relatedFrom: undefined,
       relatedTo: undefined,
+    };
+  }
+
+  /**
+   * 小测判分：提交某题答案，返回对错 + 正确选项 + 解析。
+   * 答案只在用户提交后下发，避免在题目接口里明文暴露。
+   */
+  async answerQuizQuestion(questionId: string, choice: number) {
+    const q = await this.prisma.quizQuestion.findFirst({
+      where: {
+        id: questionId,
+        status: 'PUBLISHED',
+        knowledgePoint: { status: 'PUBLISHED', deletedAt: null },
+      },
+      select: { correctIndex: true, explanation: true, choices: true },
+    });
+    if (!q) {
+      throw new BusinessException(ERROR_CODES.NOT_FOUND, '题目不存在或未发布');
+    }
+    const choiceCount = Array.isArray(q.choices) ? (q.choices as unknown[]).length : 4;
+    if (!Number.isInteger(choice) || choice < 0 || choice >= choiceCount) {
+      throw new BusinessException(ERROR_CODES.INVALID_PARAMS, '无效的选项');
+    }
+    return {
+      correct: choice === q.correctIndex,
+      correctIndex: q.correctIndex,
+      explanation: q.explanation,
     };
   }
 
@@ -209,24 +292,23 @@ export class ContentService {
       },
     });
     if (!exp) {
-      throw new Error('实验不存在');
+      throw new BusinessException(ERROR_CODES.NOT_FOUND, '实验不存在或未发布');
     }
     return exp;
   }
 
   async getStats() {
-    const where = { status: 'PUBLISHED' as const, deletedAt: null };
     const [scenes, items, knowledgePoints, experiments] = await Promise.all([
-      this.prisma.scene.count({ where }),
-      this.prisma.item.count({ where }),
-      this.prisma.knowledgePoint.count({ where }),
+      this.prisma.scene.count({ where: VISIBLE_SCENE_WHERE }),
+      this.prisma.item.count({ where: VISIBLE_ITEM_WHERE }),
+      this.prisma.knowledgePoint.count({ where: { status: 'PUBLISHED', deletedAt: null } }),
       this.prisma.experiment.count({ where: { status: 'PUBLISHED', deletedAt: null } }),
     ]);
     return { scenes, items, knowledgePoints, experiments };
   }
 
   async getKnowledgeNetwork() {
-    const [nodes, edges] = await Promise.all([
+    const [rawNodes, edges] = await Promise.all([
       this.prisma.knowledgePoint.findMany({
         where: { status: 'PUBLISHED', deletedAt: null },
         select: {
@@ -236,12 +318,25 @@ export class ContentService {
           subject: true,
           difficulty: true,
           summary: true,
+          illustrationUrl: true,
+          // 关联物品数 → 节点大小（仅计可见物品）
+          _count: { select: { items: { where: { item: VISIBLE_ITEM_WHERE } } } },
         },
       }),
       this.prisma.knowledgeRelation.findMany({
         select: { fromId: true, toId: true },
       }),
     ]);
+    const nodes = rawNodes.map((n) => ({
+      id: n.id,
+      slug: n.slug,
+      name: n.name,
+      subject: n.subject,
+      difficulty: n.difficulty,
+      summary: n.summary,
+      illustrationUrl: n.illustrationUrl,
+      itemCount: n._count.items,
+    }));
     return { nodes, edges };
   }
 }

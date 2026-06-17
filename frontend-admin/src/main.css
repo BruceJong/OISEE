@@ -4,3 +4,77 @@ html, body, #root {
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
+
+/* ── 三面板布局 ── */
+.panel-column {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  overflow: hidden;
+  min-height: 400px;
+}
+
+.panel-column__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-top: 3px solid #1677ff;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+  flex-shrink: 0;
+}
+
+.panel-column__body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ── Panel Card ── */
+.panel-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.panel-card:hover {
+  background: #f0f7ff;
+}
+
+.panel-card:hover .panel-card__actions {
+  opacity: 1;
+}
+
+.panel-card--selected {
+  background: #e6f4ff !important;
+  border-left: 3px solid #1677ff;
+}
+
+.panel-card__drag {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 2px;
+  cursor: grab;
+}
+
+.panel-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-card__actions {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+  display: flex;
+  gap: 2px;
+}

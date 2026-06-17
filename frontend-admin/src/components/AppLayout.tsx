@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Space, theme } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Space, theme, Typography } from 'antd';
 import {
   DashboardOutlined,
   AppstoreOutlined,
   BulbOutlined,
   BookOutlined,
+  ExperimentOutlined,
   LogoutOutlined,
   UserOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth';
+import { NotificationCenter } from './NotificationCenter';
 
 const { Header, Sider, Content } = Layout;
 
@@ -24,14 +27,18 @@ export function AppLayout() {
   } = theme.useToken();
 
   const menuItems = [
-    { key: '/', icon: <DashboardOutlined />, label: '仪表盘' },
-    { key: '/scenes', icon: <AppstoreOutlined />, label: '场景管理' },
-    { key: '/items', icon: <BulbOutlined />, label: '物品管理' },
-    { key: '/knowledge', icon: <BookOutlined />, label: '知识点管理' },
+    { key: '/',          icon: <DashboardOutlined />, label: '仪表盘' },
+    { key: '/scenes',    icon: <AppstoreOutlined />,  label: '场景管理' },
+    { key: '/items',     icon: <BulbOutlined />,      label: '物品管理' },
+    { key: '/knowledge', icon: <BookOutlined />,      label: '知识点管理' },
+    { key: '/experiments', icon: <ExperimentOutlined />, label: '实验管理' },
+    { key: '/settings',  icon: <SettingOutlined />,   label: '系统设置' },
   ];
 
   const selectedKey =
-    menuItems.find((m) => m.key !== '/' && location.pathname.startsWith(m.key))?.key ?? '/';
+    menuItems
+      .filter((m) => m.key !== '/')
+      .find((m) => location.pathname.startsWith(m.key))?.key ?? '/';
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -44,8 +51,9 @@ export function AppLayout() {
             justifyContent: 'center',
             color: '#fff',
             fontSize: collapsed ? 16 : 20,
-            fontWeight: 600,
+            fontWeight: 700,
             letterSpacing: 2,
+            borderBottom: '1px solid rgba(255,255,255,0.1)',
           }}
         >
           {collapsed ? 'OI' : 'OISee CMS'}
@@ -56,6 +64,7 @@ export function AppLayout() {
           selectedKeys={[selectedKey]}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
+          style={{ marginTop: 8 }}
         />
       </Sider>
       <Layout>
@@ -67,8 +76,13 @@ export function AppLayout() {
             justifyContent: 'flex-end',
             alignItems: 'center',
             borderBottom: '1px solid #f0f0f0',
+            gap: 8,
           }}
         >
+          {/* 通知中心 */}
+          <NotificationCenter />
+
+          {/* 用户菜单 */}
           <Dropdown
             menu={{
               items: [
@@ -84,9 +98,9 @@ export function AppLayout() {
               ],
             }}
           >
-            <Space style={{ cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} />
-              <span>{admin?.username ?? '管理员'}</span>
+            <Space style={{ cursor: 'pointer', marginLeft: 4 }}>
+              <Avatar icon={<UserOutlined />} size="small" />
+              <Typography.Text>{admin?.username ?? '管理员'}</Typography.Text>
             </Space>
           </Dropdown>
         </Header>
@@ -97,6 +111,8 @@ export function AppLayout() {
               minHeight: 'calc(100vh - 112px)',
               background: colorBgContainer,
               borderRadius: borderRadiusLG,
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
             <Outlet />

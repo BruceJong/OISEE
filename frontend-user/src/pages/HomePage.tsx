@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { contentApi } from '../api/content';
 import type { PublicExperiment, PublicSceneDetail } from '../api/content';
 
-const UPLOADS = 'http://localhost:3000/uploads';
+// 相对路径：开发走 Vite 代理（/uploads → 后端），生产由同源/CDN 提供
+const UPLOADS = '/uploads';
 
 export function HomePage() {
   const nav = useNavigate();

@@ -4,8 +4,11 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { contentApi } from '@/api/content';
 import { recordKpViewed } from '@/utils/progress';
 import { useBackNav, useBackStack, popBack, pushBack } from '@/utils/back-nav';
+import { ExperimentCard } from '@/components/ExperimentCard';
+import { VideoPlayer } from '@/components/VideoPlayer';
+import { useUserLevel } from '@/utils/user-level';
+import { useDetailGate } from '@/utils/gate';
 
-const userLevel = 'L2';
 const ORDER: Record<string, number> = { L1: 1, L2: 2, L3: 3 };
 function ord(k: string) { return ORDER[k] ?? 0; }
 
@@ -16,12 +19,16 @@ export function ItemDetailPage() {
   const stack = useBackStack();
   const [tab, setTab] = useState<'explode' | 'knowledge' | 'experiments'>('explode');
   const [activePart, setActivePart] = useState<number | null>(null);
+  const { level: userLevel } = useUserLevel();
 
   const { data: item, isLoading } = useQuery({
     queryKey: ['public', 'item', slug],
     queryFn: () => contentApi.itemBySlug(slug!),
     enabled: !!slug,
   });
+
+  const gateEl = useDetailGate('items', slug);
+  if (gateEl) return gateEl;
 
   if (isLoading) return <div style={{ minHeight: '60vh', display: 'grid', placeItems: 'center', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-3)', letterSpacing: 2 }}>LOADING...</div>;
   if (!item) return <div style={{ minHeight: '60vh', display: 'grid', placeItems: 'center' }}>物品不存在</div>;
@@ -34,7 +41,7 @@ export function ItemDetailPage() {
   const TABS = [
     { id: 'explode' as const, label: '爆炸图', count: parts.length, en: 'EXPLODED' },
     { id: 'knowledge' as const, label: '知识点', count: kps.length, en: 'KNOWLEDGE' },
-    { id: 'experiments' as const, label: '实验', count: (item as any).experiments?.length ?? 0, en: 'EXPERIMENTS' },
+    { id: 'experiments' as const, label: '试一试', count: (item as any).experiments?.length ?? 0, en: 'TRY IT' },
   ];
 
   return (
@@ -59,27 +66,15 @@ export function ItemDetailPage() {
             </button>
           ) : null}
           <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 56, alignItems: 'center' }}>
-            {/* 视频/图片 */}
-            <div style={{ aspectRatio: '16 / 9', background: 'linear-gradient(135deg, #0E1A33 0%, #1A2B4D 100%)', borderRadius: 8, position: 'relative', overflow: 'hidden', border: '1px solid var(--hairline)' }}>
-              {item.itemImageUrl ? (
-                <img src={item.itemImageUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }}/>
-              ) : (
-                <VideoBgSVG />
-              )}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(14,26,51,0.8) 0%, rgba(14,26,51,0.1) 100%)' }}/>
-              <div style={{ position: 'absolute', left: 40, bottom: 40, display: 'flex', alignItems: 'center', gap: 20 }}>
-                <button style={{ width: 72, height: 72, borderRadius: 999, border: 'none', background: 'var(--amber)', color: 'var(--ink)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4z" fill="currentColor"/></svg>
-                </button>
-                <div>
-                  <div className="font-mono" style={{ fontSize: 10, color: 'var(--amber)', letterSpacing: 2, marginBottom: 4 }}>PRINCIPLE VIDEO</div>
-                  <div style={{ color: 'var(--paper)', fontSize: 18, fontWeight: 600 }}>{(item as any).videoTitle || `${item.name} 是如何工作的？`}</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 4, fontFamily: 'var(--font-mono)' }}>
-                    {(item as any).videoDurationSec ? `${Math.floor((item as any).videoDurationSec / 60)}:${String((item as any).videoDurationSec % 60).padStart(2, '0')}` : '—:—'}
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* 视频播放器 —— DB 字段 principleVideoUrl 优先；空则播本地 demo */}
+            <VideoPlayer
+              url={(item as any).principleVideoUrl}
+              poster={item.itemImageUrl}
+              title={(item as any).videoTitle || `${item.name} 是如何工作的？`}
+              durationSec={(item as any).videoDurationSec}
+              eyebrowText="PRINCIPLE VIDEO"
+              fallbackSVG={<VideoBgSVG />}
+            />
 
             {/* 右：物品介绍 */}
             <div>
@@ -224,6 +219,7 @@ function KnowledgeTab({ kps, itemSlug, itemName, backStack }: {
   kps: any[]; itemSlug?: string; itemName?: string;
   backStack?: import('@/utils/back-nav').BackTarget[];
 }) {
+  const { level: userLevel } = useUserLevel();
   if (!kps.length) return <div className="placeholder" style={{ height: 200 }}>暂无关联知识点</div>;
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
@@ -292,5 +288,39 @@ function KnowledgeCoverMini({ subject, name, illustrationUrl }: {
 }
 
 function ExpsTab({ item }: { item: any }) {
-  return <div className="placeholder" style={{ height: 200 }}>暂无关联实验</div>;
+  const exps = (item.experiments ?? []).map((e: any) => e.experiment) as Array<{
+    id: string; slug: string; name: string; difficulty: string;
+    durationMin: number; needParent: boolean;
+    materialType?: string | null; description: string; coverUrl?: string | null;
+  }>;
+  if (!exps.length) {
+    return (
+      <div className="placeholder" style={{ height: 220 }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 36, opacity: 0.3, marginBottom: 8 }}>🧪</div>
+          <div>暂时还没有关联实验，我们正在准备…</div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 18 }}>
+        <div className="eyebrow">／  TRY IT · 试一试</div>
+        <span className="font-mono" style={{ fontSize: 11, color: 'var(--ink-3)', letterSpacing: 2 }}>
+          {exps.length} 个实验
+        </span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
+        {exps.map(exp => (
+          <ExperimentCard
+            key={exp.id}
+            exp={exp}
+            backUrl={`/items/${item.slug}`}
+            backLabel={item.name}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }

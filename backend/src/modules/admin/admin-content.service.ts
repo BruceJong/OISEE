@@ -337,6 +337,24 @@ export class AdminContentService {
     if (!kp) throw new BusinessException(ERROR_CODES.NOT_FOUND, '知识点不存在');
   }
 
+  async batchSceneSortOrder(items: Array<{ id: string; sortOrder: number }>) {
+    await this.prisma.$transaction(
+      items.map((item) =>
+        this.prisma.scene.update({ where: { id: item.id }, data: { sortOrder: item.sortOrder } })
+      )
+    );
+    return { ok: true };
+  }
+
+  async batchItemSortOrder(items: Array<{ id: string; sortOrder: number }>) {
+    await this.prisma.$transaction(
+      items.map((item) =>
+        this.prisma.item.update({ where: { id: item.id }, data: { sortOrder: item.sortOrder } })
+      )
+    );
+    return { ok: true };
+  }
+
   // ====================== 公共 ======================
   private handlePrismaError(e: unknown, uniqueField: string) {
     if (e instanceof Prisma.PrismaClientKnownRequestError) {

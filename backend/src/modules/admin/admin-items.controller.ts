@@ -66,4 +66,10 @@ export class AdminItemsController {
   setKps(@Param('id') id: string, @Body(new ZodValidationPipe(SetKpsSchema)) body: any) {
     return this.svc.setItemKnowledgePoints(id, body.knowledgePointIds);
   }
+
+  /** 批量更新排序 */
+  @Patch('batch/sort-order')
+  batchSort(@Body() body: { items: Array<{ id: string; sortOrder: number }> }) {
+    return this.svc.batchItemSortOrder(body.items);
+  }
 }

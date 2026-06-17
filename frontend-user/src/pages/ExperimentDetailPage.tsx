@@ -2,11 +2,15 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { contentApi } from '@/api/content';
+import { VideoPlayer } from '@/components/VideoPlayer';
+import { useExperimentsStore } from '@/utils/experiments-store';
+import { useDetailGate } from '@/utils/gate';
 
 export function ExperimentDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const nav = useNavigate();
-  const [done, setDone] = useState(false);
+  const { isExperimentDone, markExperimentDone } = useExperimentsStore();
+  const done = slug ? isExperimentDone(slug) : false;
   const [showConfetti, setShowConfetti] = useState(false);
 
   const { data: exp, isLoading } = useQuery({
@@ -14,6 +18,9 @@ export function ExperimentDetailPage() {
     queryFn: () => contentApi.experimentBySlug(slug!),
     enabled: !!slug,
   });
+
+  const gateEl = useDetailGate('experiments', slug);
+  if (gateEl) return gateEl;
 
   if (isLoading) return <div style={{ minHeight: '60vh', display: 'grid', placeItems: 'center', fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-3)', letterSpacing: 2 }}>LOADING...</div>;
   if (!exp) return <div style={{ minHeight: '60vh', display: 'grid', placeItems: 'center' }}>实验不存在</div>;
@@ -28,7 +35,8 @@ export function ExperimentDetailPage() {
   };
 
   function markDone() {
-    setDone(true); setShowConfetti(true);
+    if (slug) markExperimentDone(slug);
+    setShowConfetti(true);
     setTimeout(() => setShowConfetti(false), 2400);
   }
 
@@ -41,32 +49,14 @@ export function ExperimentDetailPage() {
             <span>←</span> 返回实验库
           </button>
           <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 56, alignItems: 'center' }}>
-            {/* 视频封面 */}
-            <div style={{ aspectRatio: '16/9', borderRadius: 8, overflow: 'hidden', position: 'relative', background: lvBg[exp.difficulty] ?? lvBg.L1, border: '1px solid var(--hairline)' }}>
-              {exp.coverUrl ? (
-                <img src={exp.coverUrl} alt={exp.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7 }}/>
-              ) : (
-                <svg viewBox="0 0 1200 675" style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }} preserveAspectRatio="xMidYMid slice">
-                  <defs><pattern id="expvid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M 0 0 L 0 48 M 0 0 L 48 0" stroke="rgba(255,255,255,0.05)" strokeWidth="1"/></pattern></defs>
-                  <rect width="100%" height="100%" fill="url(#expvid)"/>
-                  <g transform="translate(600 340)" opacity="0.85">
-                    <ellipse cx="0" cy="60" rx="220" ry="20" fill="rgba(255,255,255,0.08)"/>
-                    <rect x="-120" y="-100" width="240" height="160" rx="8" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.35)" strokeWidth="1.6"/>
-                    <circle r="40" fill="rgba(255,255,255,0.7)"/><circle r="30" fill="rgba(255,255,255,0.95)"/>
-                  </g>
-                </svg>
-              )}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(14,26,51,0.7) 0%, transparent 60%)' }}/>
-              <div style={{ position: 'absolute', left: 32, bottom: 32, display: 'flex', alignItems: 'center', gap: 16 }}>
-                <button style={{ width: 64, height: 64, borderRadius: 999, border: 'none', background: 'var(--paper)', color: 'var(--ink)', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8V4z" fill="currentColor"/></svg>
-                </button>
-                <div style={{ color: 'var(--paper)' }}>
-                  <div className="font-mono" style={{ fontSize: 10, opacity: 0.7, letterSpacing: 2 }}>DEMO VIDEO</div>
-                  <div style={{ fontSize: 16, fontWeight: 600, marginTop: 2 }}>{exp.name}</div>
-                </div>
-              </div>
-            </div>
+            {/* 视频播放器（exp.videoUrl 优先；空则播 demo） */}
+            <VideoPlayer
+              url={(exp as any).videoUrl}
+              poster={exp.coverUrl}
+              title={exp.name}
+              eyebrowText="DEMO VIDEO"
+              accent="var(--paper)"
+            />
             {/* 信息 */}
             <div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>

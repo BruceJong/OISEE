@@ -13,6 +13,9 @@ out/
 .env.*.local
 !.env.example
 
+# ────────── Claude Code 本地配置（含本机权限白名单，勿入库） ──────────
+.claude/settings.local.json
+
 # ────────── 日志 ──────────
 *.log
 logs/
@@ -24,6 +27,8 @@ yarn-error.log*
 # ────────── 数据上传（生成的图片/视频；走 CDN，不入 git） ──────────
 data/uploads/
 !data/uploads/.gitkeep
+# 本地演示视频目录（运行时数据，不入 git）
+data/video/
 
 # ────────── Prisma 本地产物 ──────────
 backend/prisma/migrations/dev.db*

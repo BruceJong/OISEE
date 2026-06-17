@@ -65,8 +65,8 @@ export function DashboardPage() {
         </Typography.Paragraph>
         <Typography.Paragraph>
           5. 切换到{' '}
-          <a href="http://localhost:5173" target="_blank" rel="noreferrer">
-            http://localhost:5173
+          <a href="http://localhost:5175" target="_blank" rel="noreferrer">
+            http://localhost:5175
           </a>{' '}
           查看用户端效果
         </Typography.Paragraph>

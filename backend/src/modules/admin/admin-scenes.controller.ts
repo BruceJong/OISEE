@@ -61,4 +61,10 @@ export class AdminScenesController {
   ) {
     return this.svc.updateItemLayouts(id, body);
   }
+
+  /** 批量更新排序 */
+  @Patch('batch/sort-order')
+  batchSort(@Body() body: { items: Array<{ id: string; sortOrder: number }> }) {
+    return this.svc.batchSceneSortOrder(body.items);
+  }
 }

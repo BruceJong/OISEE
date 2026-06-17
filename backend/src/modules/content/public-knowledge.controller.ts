@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ContentService } from './content.service';
 
 @Controller('knowledge')
@@ -17,6 +17,15 @@ export class PublicKnowledgeController {
   @Get('network')
   network() {
     return this.svc.getKnowledgeNetwork();
+  }
+
+  /** 小测判分：提交后才返回正确答案与解析 */
+  @Post('quiz/:questionId/answer')
+  answerQuiz(
+    @Param('questionId') questionId: string,
+    @Body() body: { choice?: number }
+  ) {
+    return this.svc.answerQuizQuestion(questionId, Number(body?.choice));
   }
 
   @Get(':slug')

@@ -19,6 +19,12 @@ import { HealthController } from './modules/health/health.controller';
       serveRoot: '/uploads',
       serveStaticOptions: { fallthrough: false },
     }),
+    // 演示视频本地服务 → /video/*；生产环境视频地址走 CMS 配置（DB 字段 *VideoUrl）
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), process.env.OISEE_VIDEO_DIR ?? '../data/video'),
+      serveRoot: '/video',
+      serveStaticOptions: { fallthrough: false },
+    }),
     PrismaModule,
     AuthModule,
     ContentModule,

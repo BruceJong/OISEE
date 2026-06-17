@@ -50,7 +50,7 @@ client.interceptors.response.use(
       useAuthStore.getState().logout();
       message.error('登录已过期，请重新登录');
       setTimeout(() => {
-        window.location.href = '/login';
+        window.location.href = import.meta.env.BASE_URL + 'login';
       }, 500);
       return Promise.reject(err);
     }

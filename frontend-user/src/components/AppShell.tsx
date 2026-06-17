@@ -1,5 +1,7 @@
-import { useEffect } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/utils/auth';
+import { getAvatar } from '@/utils/avatars';
 
 /**
  * 每次路由切换都把滚动位置归零
@@ -54,15 +56,73 @@ function TopNav() {
           </NavLink>
         ))}
       </nav>
-      <div className="user-hud">
-        <div className="hud-points">
-          <b>320</b><span style={{ fontSize: 11 }}>pt</span>
-        </div>
-        <Link to="/backpack" className="hud-avatar" title="我的书包">航</Link>
-      </div>
+      <UserHud />
     </header>
   );
 }
+
+function UserHud() {
+  const { user, isAuthed, logout } = useAuth();
+  const nav = useNavigate();
+  const [open, setOpen] = useState(false);
+
+  if (!isAuthed || !user) {
+    return (
+      <div className="user-hud">
+        <Link to="/login" className="btn ghost sm">登录</Link>
+        <Link to="/register" className="btn amber sm">注册</Link>
+      </div>
+    );
+  }
+
+  const av = getAvatar(user.avatar);
+
+  function handleLogout() {
+    logout();
+    setOpen(false);
+    nav('/');
+  }
+
+  return (
+    <div className="user-hud" style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        title={user.nickname}
+        style={{
+          width: 40, height: 40, borderRadius: 999, border: 'none', cursor: 'pointer',
+          background: av.bg, color: '#fff', fontSize: 20, display: 'grid', placeItems: 'center',
+        }}
+      >
+        {av.emoji}
+      </button>
+
+      {open && (
+        <>
+          {/* 点击外部关闭 */}
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 10px)', right: 0, zIndex: 41,
+            minWidth: 200, background: 'var(--paper)', border: '1px solid var(--hairline)',
+            borderRadius: 10, boxShadow: '0 8px 32px rgba(14,26,51,0.14)', overflow: 'hidden',
+          }}>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--hairline)' }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>{user.nickname}</div>
+              {user.username && <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 2 }}>@{user.username}</div>}
+            </div>
+            <button onClick={() => { setOpen(false); nav('/backpack'); }} style={menuItemStyle}>🎒 我的书包</button>
+            <button onClick={handleLogout} style={{ ...menuItemStyle, color: 'var(--coral)' }}>退出登录</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+const menuItemStyle: React.CSSProperties = {
+  display: 'block', width: '100%', textAlign: 'left', padding: '12px 16px',
+  background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14,
+  fontFamily: 'inherit', color: 'var(--ink-2)',
+};
 
 function Footer() {
   return (

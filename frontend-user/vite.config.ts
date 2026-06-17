@@ -14,7 +14,7 @@ export default defineConfig({
     include: ['@oisee/shared'],
   },
   server: {
-    port: 5173,
+    port: 5175,
     fs: {
       allow: ['..', '../..', '../../..'],
     },
@@ -24,6 +24,10 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/uploads': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/video': {
         target: 'http://localhost:3000',
         changeOrigin: true,
       },

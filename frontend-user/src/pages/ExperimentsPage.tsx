@@ -3,11 +3,15 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { contentApi } from '@/api/content';
 import { Pagination } from '@/components/Pagination';
+import { useAuth } from '@/utils/auth';
+import { ANON_LIMIT } from '@/utils/gate';
+import { LockedCard, AnonGateBanner } from '@/components/AnonGate';
 
 const PAGE_SIZE = 20;
 
 export function ExperimentsPage() {
   const nav = useNavigate();
+  const { isAuthed } = useAuth();
   const [filters, setFilters] = useState({
     levels: new Set<string>(),
     materials: new Set<string>(),
@@ -112,13 +116,29 @@ export function ExperimentsPage() {
         <main>
           <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <span className="font-mono" style={{ fontSize: 11, color: 'var(--ink-3)', letterSpacing: 2 }}>
-              {isLoading ? '加载中...' : `${filtered.length} / ${experiments.length} 个实验`}
+              {isLoading ? '加载中...' : !isAuthed ? `前 ${ANON_LIMIT} 条 · 登录查看全部 ${experiments.length} 个` : `${filtered.length} / ${experiments.length} 个实验`}
             </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-            {paged.map(e => <ExperimentCard key={e.id} exp={e} onClick={() => nav(`/experiments/${e.slug}`)} />)}
-          </div>
-          <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} onChange={setPage} />
+          {!isAuthed ? (
+            experiments.length === 0 ? (
+              <div className="placeholder" style={{ height: 320 }}><div>暂无实验</div></div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+                  {experiments.slice(0, ANON_LIMIT).map(e => <ExperimentCard key={e.id} exp={e} onClick={() => nav(`/experiments/${e.slug}`)} />)}
+                  {experiments.length > ANON_LIMIT && <><LockedCard /><LockedCard /><LockedCard /></>}
+                </div>
+                {experiments.length > ANON_LIMIT && <AnonGateBanner total={experiments.length} />}
+              </>
+            )
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+                {paged.map(e => <ExperimentCard key={e.id} exp={e} onClick={() => nav(`/experiments/${e.slug}`)} />)}
+              </div>
+              <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} onChange={setPage} />
+            </>
+          )}
         </main>
       </div>
     </div>
@@ -150,12 +170,31 @@ function ExperimentCard({ exp, onClick }: { exp: any; onClick: () => void }) {
             </g>
           </svg>
         )}
-        <div style={{ position: 'absolute', top: 14, left: 14, display: 'flex', gap: 6 }}>
-          <span className={`tag ${exp.difficulty}`}>{`${exp.difficulty} · ${{L1:'启蒙',L2:'探索',L3:'深化'}[exp.difficulty as string]}`}</span>
+        {/* 难度 / 材料 标签层 —— 浮在图上但与图分离：白底 + 投影 */}
+        <div style={{
+          position: 'absolute', top: 14, left: 14, display: 'flex', gap: 6,
+        }}>
+          <span
+            className={`tag ${exp.difficulty}`}
+            style={{
+              background: '#ffffff',
+              boxShadow: '0 2px 6px rgba(14,26,51,0.25)',
+            }}
+          >
+            {`${exp.difficulty} · ${{L1:'启蒙',L2:'探索',L3:'深化'}[exp.difficulty as string]}`}
+          </span>
         </div>
         {exp.materialType && (
           <div style={{ position: 'absolute', top: 14, right: 14 }}>
-            <span className="tag">{exp.materialType}</span>
+            <span
+              className="tag"
+              style={{
+                background: '#ffffff',
+                boxShadow: '0 2px 6px rgba(14,26,51,0.25)',
+              }}
+            >
+              {exp.materialType}
+            </span>
           </div>
         )}
       </div>
