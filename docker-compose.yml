@@ -1,0 +1,70 @@
+# ============================================================
+# OISee 生产编排（单台 ECS）
+# 启动：
+#   docker compose --env-file /opt/oisee/.env.production up -d --build
+# ============================================================
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: oisee-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${OISEE_DB_USER}
+      POSTGRES_PASSWORD: ${OISEE_DB_PASSWORD}
+      POSTGRES_DB: ${OISEE_DB_NAME}
+    volumes:
+      - /opt/oisee/data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${OISEE_DB_USER} -d ${OISEE_DB_NAME}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [oisee]
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '5' }
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    container_name: oisee-api
+    restart: unless-stopped
+    env_file: /opt/oisee/.env.production
+    environment:
+      # 媒体目录相对 API 的 cwd(/app/backend)；与下面卷挂载对应，勿改
+      OISEE_UPLOAD_DIR: ../data/uploads
+      OISEE_VIDEO_DIR: ../data/video
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - /opt/oisee/data/uploads:/app/data/uploads
+      - /opt/oisee/data/video:/app/data/video
+    expose: ['3000']
+    networks: [oisee]
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '5' }
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx.Dockerfile
+    container_name: oisee-nginx
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /opt/oisee/data/nginx/ssl:/etc/nginx/ssl:ro
+      - /opt/oisee/data/logs/nginx:/var/log/nginx
+    depends_on: [api]
+    networks: [oisee]
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '5' }
+
+networks:
+  oisee:
+    driver: bridge

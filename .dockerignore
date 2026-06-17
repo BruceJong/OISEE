@@ -1,0 +1,32 @@
+# 构建上下文忽略（镜像内会重新安装/构建）
+node_modules
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+
+# 运行时数据与备份（不进镜像）
+data
+backups
+
+# 版本控制与本地配置
+.git
+.github
+.claude
+.vscode
+
+# 环境变量（生产用 --env-file 注入，绝不打进镜像）
+.env
+.env.*
+!.env.example
+
+# 日志与系统文件
+*.log
+.DS_Store
+**/.DS_Store
+
+# 大体积演示素材（前端不打包，无需进构建上下文）
+docs/prototype/*.mp4
+docs/prototype/*.jpeg
+docs/prototype/*.jpg
+docs/prototype/*.png
