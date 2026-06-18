@@ -8,11 +8,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // 直接指向 shared 的 TS 源（ESM），绕开 dist 的 CommonJS 产物。
+      // 否则 workspace symlink 的 CJS dist 不在 node_modules 下，Rollup 会按
+      // ESM 解析 CJS，丢失命名导出，导致生产 build 报 "X is not exported"。
+      '@oisee/shared': path.resolve(__dirname, '../shared/lib/src/index.ts'),
     },
-  },
-  // 关键：让 Vite 把 workspace 内的 CJS 包（@oisee/shared）预构建为 ESM
-  optimizeDeps: {
-    include: ['@oisee/shared'],
   },
   server: {
     port: 5174,
