@@ -5,21 +5,22 @@ import {
   UseGuards,
   UseInterceptors,
   Query,
+  Inject,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAdminGuard } from '../auth/guards/jwt-admin.guard';
-import { LocalStorageService } from './local-storage.service';
+import { STORAGE_SERVICE, StorageService } from './storage.interface';
 import { BusinessException } from '../../common/exceptions/business.exception';
 import { ERROR_CODES } from '@oisee/shared';
 
 @Controller('admin/media')
 @UseGuards(JwtAdminGuard)
 export class MediaController {
-  constructor(private storage: LocalStorageService) {}
+  constructor(@Inject(STORAGE_SERVICE) private storage: StorageService) {}
 
   /**
    * 简化的"前端选文件 → POST 上传 → 返回 URL"
-   * 生产环境会走 OSS 直传签名（本地无需复杂签名）
+   * 存储后端由 OISEE_STORAGE_DRIVER 决定（本地磁盘 / 阿里云 OSS）
    */
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))

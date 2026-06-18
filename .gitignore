@@ -57,3 +57,7 @@ coverage/
 # ────────── 临时文件 ──────────
 *.tmp
 *.bak
+
+# 阿里云密钥文件(勿入库)
+AccessKey.csv
+*.csv

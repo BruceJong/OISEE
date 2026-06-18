@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BusinessException } from '../../common/exceptions/business.exception';
 import { ERROR_CODES } from '@oisee/shared';
-import { LocalStorageService } from '../media/local-storage.service';
+import { STORAGE_SERVICE, StorageService } from '../media/storage.interface';
 import { runTemplate, extractVariables } from './ai-template-runner';
 import { AdminSettingsService } from './admin-settings.service';
 import { Buffer } from 'node:buffer';
@@ -35,7 +35,7 @@ export class AdminAiTasksService {
 
   constructor(
     private prisma: PrismaService,
-    private storage: LocalStorageService,
+    @Inject(STORAGE_SERVICE) private storage: StorageService,
     private settings: AdminSettingsService,
   ) {}
 
