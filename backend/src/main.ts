@@ -12,6 +12,20 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1', { exclude: ['uploads/(.*)', 'video/(.*)'] });
 
+  // 生产（OSS 存储）：本地 uploads 未命中的文件回退到 OSS。
+  // 覆盖前端历史遗留的 /uploads/* 相对路径（如世界地图 map-v11.png、首页剖面图）。
+  // 本地命中的文件由上面的 ServeStatic 直接返回；未命中才走到这里。
+  if (process.env.OISEE_STORAGE_DRIVER === 'oss') {
+    const ossBase = (
+      process.env.OISEE_OSS_PUBLIC_BASE_URL ||
+      `https://${process.env.OISEE_OSS_BUCKET}.oss-${process.env.OISEE_OSS_REGION}.aliyuncs.com`
+    ).replace(/\/+$/, '');
+    app.use('/uploads', (req: { url: string }, res: { redirect: (code: number, url: string) => void }) => {
+      res.redirect(302, ossBase + req.url);
+    });
+    Logger.log(`/uploads 未命中回退 → ${ossBase}`, 'Bootstrap');
+  }
+
   app.enableCors({
     origin: [
       process.env.OISEE_WEB_ORIGIN ?? 'http://localhost:5173',
